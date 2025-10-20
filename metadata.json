@@ -1,0 +1,5 @@
+{
+  "name": "Interactive C++ Learning Lab",
+  "description": "An interactive C++ learning environment that visualizes code execution step-by-step. It includes features like 'Paper & Pen' tracing, simulated memory, and detailed explanations for common string and character manipulation problems.",
+  "requestFramePermissions": []
+}
