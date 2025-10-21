@@ -2399,6 +2399,261 @@ function genDeleteClientByAccountNumberSteps(accountNumber: string): Step[] {
     return steps;
 }
 
+function genUpdateClientByAccountNumberSteps(accountNumber: string): Step[] {
+    const steps: Step[] = [];
+    let stepCounter = 0;
+    const initialFileContents = [
+        "A101#//#1111#//#John Smith#//#555-0101#//#4500.5",
+        "A102#//#2222#//#Jane Doe#//#555-0102#//#8250",
+        "A123#//#5678#//#Mohammed Abu-Hadhoud#//#079000000#//#5124.88"
+    ];
+    let fileContents = [...initialFileContents];
+    const separator = "#//#";
+    
+    let vClients = initialFileContents.map(line => {
+        const vClientData = line.split(separator);
+        return {
+            AccountNumber: vClientData[0],
+            PinCode: vClientData[1],
+            Name: vClientData[2],
+            Phone: vClientData[3],
+            AccountBalance: parseFloat(vClientData[4]),
+            MarkForDelete: false
+        };
+    });
+
+    const newData = {
+        PinCode: "9876",
+        Name: "Jane D. Smith",
+        Phone: "555-0199",
+        AccountBalance: 9500.75
+    };
+
+    let output: string[] = [];
+
+    steps.push({
+        i: stepCounter++,
+        phase: 'read_account_number',
+        code: `string AccountNumber = ReadClientAccountNumber();`,
+        explanation: `Simulating user input. Target for update: "${accountNumber}".`,
+        input: accountNumber,
+        mem: [`Target AccountNumber = "${accountNumber}"`],
+        vectorContents: [...vClients],
+        fileContents: [...fileContents],
+        update: { target: accountNumber, found: false, confirmed: null }
+    });
+
+    steps.push({
+        i: stepCounter++,
+        phase: 'load_vector',
+        code: `vector<sClient> vClients = LoadCleintsDataFromFile(ClientsFileName);`,
+        explanation: `Loading all client data from "Clients.txt" into a vector.`,
+        input: accountNumber,
+        mem: [`vClients now has ${vClients.length} records`],
+        vectorContents: [...vClients],
+        fileContents: [...fileContents],
+        update: { target: accountNumber, found: false, confirmed: null }
+    });
+
+    // --- Find Client ---
+    let foundClient: any = null;
+    let foundIndex = -1;
+    for (let i = 0; i < vClients.length; i++) {
+        const C = vClients[i];
+        const match = C.AccountNumber === accountNumber;
+        steps.push({
+            i: i,
+            phase: 'find_client',
+            code: `if (C.AccountNumber == "${accountNumber}")`,
+            explanation: `Searching... Is "${C.AccountNumber}" == "${accountNumber}"? Result: ${match ? 'Yes' : 'No'}.`,
+            input: accountNumber,
+            mem: [`Comparing with index ${i}`],
+            vectorContents: [...vClients],
+            fileContents: [...fileContents],
+            update: { target: accountNumber, found: false, confirmed: null }
+        });
+        if (match) {
+            foundClient = { ...C };
+            foundIndex = i;
+            break;
+        }
+    }
+
+    if (!foundClient) {
+        output.push(`\nClient with Account Number (${accountNumber}) is Not Found!`);
+        steps.push({
+            i: stepCounter++,
+            phase: 'find_client',
+            code: `// Client Not Found`,
+            explanation: `Finished search. No match found for "${accountNumber}".`,
+            input: accountNumber,
+            output: [...output],
+            mem: [`Client not found`],
+            vectorContents: [...vClients],
+            fileContents: [...fileContents],
+            update: { target: accountNumber, found: false, confirmed: null }
+        });
+    } else {
+        const clientBefore = { ...foundClient };
+        steps.push({
+            i: foundIndex,
+            phase: 'find_client',
+            code: `// Client Found`,
+            explanation: `Match found for "${accountNumber}" at index ${foundIndex}.`,
+            input: accountNumber,
+            mem: [`Found client: "${foundClient.Name}"`],
+            vectorContents: [...vClients],
+            fileContents: [...fileContents],
+            update: { target: accountNumber, found: true, confirmed: null, clientBefore }
+        });
+
+        // --- Confirm Update ---
+        output.push(`\nThe following are the client details:`, `\nAccout Number: ${foundClient.AccountNumber}`, `\nPin Code      : ${foundClient.PinCode}`, `\nName          : ${foundClient.Name}`, `\nPhone         : ${foundClient.Phone}`, `\nAccount Balance: ${foundClient.AccountBalance}`);
+        steps.push({
+            i: stepCounter++,
+            phase: 'confirm_update',
+            code: `PrintClientCard(Client);`,
+            explanation: `Displaying client details before asking for confirmation.`,
+            input: accountNumber,
+            output: [...output],
+            mem: [`Printing client card`],
+            vectorContents: [...vClients],
+            fileContents: [...fileContents],
+            update: { target: accountNumber, found: true, confirmed: null, clientBefore }
+        });
+
+        output.push(`\n\nAre you sure you want update this client? y/n ? `);
+        steps.push({
+            i: stepCounter++,
+            phase: 'confirm_update',
+            code: `cin >> Answer;`,
+            explanation: `Simulating user confirming update by entering 'y'.`,
+            input: accountNumber,
+            output: [...output],
+            mem: [`Answer = 'y'`],
+            vectorContents: [...vClients],
+            fileContents: [...fileContents],
+            update: { target: accountNumber, found: true, confirmed: true, clientBefore }
+        });
+        
+        // --- Read New Data ---
+        let clientAfter = { ...clientBefore };
+        steps.push({
+            i: stepCounter++,
+            phase: 'read_new_data',
+            code: `C = ChangeClientRecord(AccountNumber);`,
+            explanation: 'Simulating user entering new data for the client.',
+            input: accountNumber,
+            mem: ['Reading new client info'],
+            vectorContents: [...vClients],
+            fileContents: [...fileContents],
+            update: { target: accountNumber, found: true, confirmed: true, clientBefore }
+        });
+
+        Object.entries(newData).forEach(([key, value]) => {
+            (clientAfter as any)[key] = value;
+            steps.push({
+                i: stepCounter++,
+                phase: 'read_new_data',
+                field: key as any,
+                code: `// Reading new ${key}...`,
+                explanation: `Simulated input for ${key}: "${value}".`,
+                input: accountNumber,
+                mem: [`New ${key} = ${value}`],
+                vectorContents: [...vClients],
+                fileContents: [...fileContents],
+                update: { target: accountNumber, found: true, confirmed: true, clientBefore, clientAfter: { ...clientAfter } }
+            });
+        });
+
+        // --- Update Vector ---
+        vClients[foundIndex] = clientAfter;
+        steps.push({
+            i: foundIndex,
+            phase: 'update_vector',
+            code: `// Update client in vector`,
+            explanation: `Updating the client record at index ${foundIndex} in the memory vector.`,
+            input: accountNumber,
+            mem: [`Updated "${clientAfter.Name}" in vector`],
+            vectorContents: [...vClients],
+            fileContents: [...fileContents],
+            update: { target: accountNumber, found: true, confirmed: true, clientBefore, clientAfter }
+        });
+        
+        // --- Save to File ---
+        const newFileContents: string[] = [];
+        steps.push({
+            i: stepCounter++,
+            phase: 'save_to_file',
+            code: `SaveCleintsDataToFile(ClientsFileName, vClients);`,
+            explanation: `Opening "Clients.txt" in write mode (ios::out) to overwrite it.`,
+            input: accountNumber,
+            mem: [`Opening file for overwrite`],
+            vectorContents: [...vClients],
+            fileContents: [...fileContents],
+            update: { target: accountNumber, found: true, confirmed: true, clientBefore, clientAfter }
+        });
+        
+        for(let i = 0; i < vClients.length; i++) {
+            const C = vClients[i];
+            const line = `${C.AccountNumber}${separator}${C.PinCode}${separator}${C.Name}${separator}${C.Phone}${separator}${C.AccountBalance}`;
+            newFileContents.push(line);
+            steps.push({
+                i: i,
+                phase: 'save_to_file',
+                code: `MyFile << DataLine << endl;`,
+                explanation: `Writing record for "${C.Name}" to the file.`,
+                input: accountNumber,
+                mem: [`Writing line for ${C.AccountNumber}`],
+                vectorContents: [...vClients],
+                fileContents: [...newFileContents],
+                update: { target: accountNumber, found: true, confirmed: true, clientBefore, clientAfter }
+            });
+        }
+        fileContents = newFileContents;
+
+        steps.push({
+            i: stepCounter++,
+            phase: 'save_to_file',
+            code: `MyFile.close();`,
+            explanation: `Finished writing. Closing the file. The client has now been permanently updated in the file.`,
+            input: accountNumber,
+            mem: [`File closed`],
+            vectorContents: [...vClients],
+            fileContents: [...fileContents],
+            update: { target: accountNumber, found: true, confirmed: true, clientBefore, clientAfter }
+        });
+
+        output.push(`\n\nClient Updated Successfully.`);
+        steps.push({
+            i: stepCounter++,
+            phase: 'print_result',
+            code: `cout << "\\n\\nClient Updated Successfully.";`,
+            explanation: `Printing final success message.`,
+            input: accountNumber,
+            output: [...output],
+            mem: [`Update successful`],
+            vectorContents: [...vClients],
+            fileContents: [...fileContents],
+            update: { target: accountNumber, found: true, confirmed: true, clientBefore, clientAfter }
+        });
+    }
+
+    steps.push({
+        i: stepCounter++,
+        code: 'return 0;',
+        explanation: 'Program finished.',
+        input: accountNumber,
+        output: [...output],
+        mem: ['Done'],
+        vectorContents: [...vClients],
+        fileContents: [...fileContents],
+    });
+
+    return steps;
+}
+
+
 
 export const problems: Problem[] = [
   { id: 1, title: 'Problem 1 — Print First Letter of Each Word', description: 'Read a string and print the first letter of every word.', example: 'programming is fun', generator: genPrintFirstLettersSteps, functions: [
@@ -2919,5 +3174,33 @@ export const problems: Problem[] = [
       }
     ],
     keyConcepts: ['Soft Delete', 'File Overwriting (ios::out)', 'Vector Pass-by-Reference', 'Data Persistence', 'State Management']
+  },
+  {
+    id: 27,
+    title: 'Problem 27 — Update Client by Account Number',
+    description: 'Visualize finding a client, reading new data, updating the record in memory, and overwriting the file.',
+    example: 'A123',
+    generator: genUpdateClientByAccountNumberSteps,
+    functions: [
+        {
+            name: 'Helper Functions',
+            signature: '// Load, Convert, Find, etc.',
+            explanation: 'This problem relies on several helper functions from previous problems to load, convert, find, and save client data.',
+            code: `// Functions SplitString, ConvertLinetoRecord, LoadCleintsDataFromFile, FindClientByAccountNumber, and SaveCleintsDataToFile are assumed to be defined.`
+        },
+        {
+            name: 'ChangeClientRecord',
+            signature: 'sClient ChangeClientRecord(string AccountNumber)',
+            explanation: 'Prompts the user to enter new details for a client, keeping the original AccountNumber. Returns a new, populated sClient struct.',
+            code: `sClient ChangeClientRecord(string AccountNumber)\n{\n    sClient Client;\n    Client.AccountNumber = AccountNumber;\n    cout << "\\n\\nEnter PinCode? ";\n    getline(cin >> ws, Client.PinCode);\n    cout << "Enter Name? ";\n    getline(cin, Client.Name);\n    cout << "Enter Phone? ";\n    getline(cin, Client.Phone);\n    cout << "Enter AccountBalance? ";\n    cin >> Client.AccountBalance;\n    return Client;\n}`
+        },
+        {
+            name: 'UpdateClientByAccountNumber',
+            signature: 'bool UpdateClientByAccountNumber(string AccountNumber, vector<sClient>& vClients)',
+            explanation: 'Finds a client, asks for confirmation, reads new data, updates the client in the vector (by reference), and saves the changes back to the file.',
+            code: `struct sClient\n{\n    string AccountNumber;\n    string PinCode;\n    string Name;\n    string Phone;\n    double AccountBalance;\n    bool MarkForDelete = false;\n};\n\nbool UpdateClientByAccountNumber(string AccountNumber, vector<sClient>& vClients)\n{\n    sClient Client;\n    char Answer = 'n';\n    if (FindClientByAccountNumber(AccountNumber, vClients, Client))\n    {\n        PrintClientCard(Client);\n        cout << "\\n\\nAre you sure you want update this client? y/n ? ";\n        cin >> Answer;\n        if (Answer == 'y' || Answer == 'Y')\n        {\n            for (sClient& C : vClients)\n            {\n                if (C.AccountNumber == AccountNumber)\n                {\n                    C = ChangeClientRecord(AccountNumber);\n                    break;\n                }\n            }\n            SaveCleintsDataToFile(ClientsFileName, vClients);\n            cout << "\\n\\nClient Updated Successfully.";\n            return true;\n        }\n    }\n    else\n    {\n        cout << "\\nClient with Account Number (" << AccountNumber << ") is Not Found!";\n        return false;\n    }\n}`
+        }
+    ],
+    keyConcepts: ['Data Update', 'In-place Modification', 'File Overwriting', 'Vector Pass-by-Reference', 'CRUD Operations']
   }
 ];

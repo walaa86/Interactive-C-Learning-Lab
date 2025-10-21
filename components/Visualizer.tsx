@@ -296,6 +296,16 @@ const Visualizer: React.FC<VisualizerProps> = ({ problem }) => {
     cout << endl;
             `;
             break;
+        case 27:
+             mainBody = `
+    const string ClientsFileName = "Clients.txt";
+    vector<sClient> vClients = LoadCleintsDataFromFile(ClientsFileName);
+    string AccountNumber = ReadClientAccountNumber();
+    
+    UpdateClientByAccountNumber(AccountNumber, vClients);
+    cout << endl;
+            `;
+            break;
         default:
             mainBody = `    // TODO: Implement main execution logic for this problem.`;
     }
@@ -370,7 +380,7 @@ ${mainBody}
   const isCaseInsensitiveCounterProblem = problem.id === 8;
   const isVowelCounterProblem = problem.id === 10;
   const isWordCounterProblem = problem.id === 13;
-  const isVectorProblem = [14, 22, 24, 25, 26].includes(problem.id);
+  const isVectorProblem = [14, 22, 24, 25, 26, 27].includes(problem.id);
   const isTrimProblem = problem.id === 15;
   const isJoinProblem = problem.id === 16;
   const isJoinOverloadProblem = problem.id === 17;
@@ -382,8 +392,9 @@ ${mainBody}
   const isLoadClientsProblem = problem.id === 24;
   const isFindClientProblem = problem.id === 25;
   const isDeleteClientProblem = problem.id === 26;
+  const isUpdateClientProblem = problem.id === 27;
   
-  const isFileBasedProblem = [23, 24, 25, 26].includes(problem.id);
+  const isFileBasedProblem = [23, 24, 25, 26, 27].includes(problem.id);
 
   const fixedClientData = {
     AccountNumber: "A1234",
@@ -408,7 +419,7 @@ ${mainBody}
             </button>
         </div>
         <div className="mb-3">
-          <label className="text-xs font-medium">{isStructToLineProblem ? 'Separator:' : [16, 17].includes(problem.id) ? 'Delimiter Input:' : isReplaceWordProblem ? 'Input (String|Find|Replace):' : (isFindClientProblem || isDeleteClientProblem) ? 'Account Number to Find/Delete:' : 'Input:'}</label>
+          <label className="text-xs font-medium">{isStructToLineProblem ? 'Separator:' : [16, 17].includes(problem.id) ? 'Delimiter Input:' : isReplaceWordProblem ? 'Input (String|Find|Replace):' : (isFindClientProblem || isDeleteClientProblem || isUpdateClientProblem) ? 'Account Number to Find/Delete/Update:' : 'Input:'}</label>
           <input 
             value={input} 
             onChange={e => setInput((problem.id === 5 || problem.id === 9) ? e.target.value.slice(0, 1) : e.target.value)} 
@@ -501,7 +512,7 @@ ${mainBody}
                     </div>
                 ) : (
                   <div className="p-3 border rounded bg-white flex items-center justify-center min-h-[96px]">
-                    <div className="text-2xl font-bold mono p-4">{[12, 13, 14, 15, 18, 19, 20, 22, 25, 26].includes(problem.id) ? (problem.id === 19 ? input.split('|')[0] : input) : (charList[0] || '')}</div>
+                    <div className="text-2xl font-bold mono p-4">{[12, 13, 14, 15, 18, 19, 20, 22, 25, 26, 27].includes(problem.id) ? (problem.id === 19 ? input.split('|')[0] : input) : (charList[0] || '')}</div>
                   </div>
                 )}
             </div>
@@ -555,6 +566,38 @@ ${mainBody}
                   </div>
               )}
               
+              {isUpdateClientProblem && (() => {
+                const updateState = current.update || { target: input, found: false, confirmed: null };
+                const phaseMap: {[key: string]: string} = {
+                    read_account_number: 'Read Input', load_vector: 'Load Vector', find_client: 'Finding Client',
+                    confirm_update: 'Awaiting Confirmation', read_new_data: 'Reading New Data',
+                    update_vector: 'Updating in Memory', save_to_file: 'Saving to File', print_result: 'Printing Result'
+                };
+                return (
+                  <div className="card">
+                    <div className="text-sm font-semibold mb-2">Update Operation</div>
+                    <div className="space-y-2">
+                        <div>
+                            <div className="text-xs text-gray-500">Phase</div>
+                            <div className="p-2 bg-indigo-100 rounded mt-1 font-bold text-base text-center">{phaseMap[current.phase || ''] || 'N/A'}</div>
+                        </div>
+                        <div>
+                            <div className="text-xs text-gray-500">Target Account #</div>
+                            <div className="p-2 bg-purple-100 rounded mt-1 font-bold text-base mono">"{updateState.target}"</div>
+                        </div>
+                        <div>
+                            <div className="text-xs text-gray-500">Found?</div>
+                            <div className={`p-2 rounded mt-1 font-bold text-base ${updateState.found ? 'bg-green-100' : 'bg-red-100'}`}>{updateState.found ? 'Yes ✓' : 'No ✗'}</div>
+                        </div>
+                         <div>
+                            <div className="text-xs text-gray-500">Confirmed?</div>
+                            <div className={`p-2 rounded mt-1 font-bold text-base ${updateState.confirmed === null ? 'bg-gray-100' : (updateState.confirmed ? 'bg-green-100' : 'bg-red-100')}`}>{updateState.confirmed === null ? 'N/A' : (updateState.confirmed ? 'Yes ✓' : 'No ✗')}</div>
+                        </div>
+                    </div>
+                  </div>
+                )
+              })()}
+
               {isDeleteClientProblem && (() => {
                 const deleteState = current.delete || { target: input, found: false, confirmed: null };
                 const phaseMap: {[key: string]: string} = {
@@ -611,7 +654,7 @@ ${mainBody}
                 )
               })()}
 
-              {(isTrimProblem || isJoinOverloadProblem || isReverseWordsProblem || isLineToStructProblem || isAddClientsProblem || isLoadClientsProblem || isFindClientProblem) && !isDeleteClientProblem && (() => {
+              {(isTrimProblem || isJoinOverloadProblem || isReverseWordsProblem || isLineToStructProblem || isAddClientsProblem || isLoadClientsProblem || isFindClientProblem || isUpdateClientProblem) && !isDeleteClientProblem && (() => {
                   const phaseMap: {[key: string]: string} = {
                       left: 'Trim Left', right: 'Trim Right', all: 'Trim All', vector: 'Vector Join',
                       array: 'Array Join', split: 'Splitting String', reverse: 'Reversing Words',
@@ -620,6 +663,7 @@ ${mainBody}
                       loop_check: 'Loop Check', load_file: 'Loading File', parse_line: 'Parsing Line',
                       add_to_vector: 'Add to Vector', print_table: 'Printing Table', read_account_number: 'Read Input',
                       load_vector: 'Load Vector', search_vector: 'Searching Vector', print_result: 'Print Result',
+                      confirm_update: 'Confirm Update', read_new_data: 'Read New Data', update_vector: 'Update Vector'
                   };
                   const currentPhase = current.phase || (isTrimProblem ? 'left' : (isJoinOverloadProblem ? 'vector' : (isReverseWordsProblem || isLineToStructProblem ? 'split' : '')));
                   return (
@@ -890,7 +934,8 @@ ${mainBody}
                                       (isReverseWordsProblem && current.phase === 'reverse' && current.i === index) ||
                                       (isLineToStructProblem && current.phase === 'assign' && current.i === index) ||
                                       (isFindClientProblem && current.phase === 'search_vector' && current.search?.currentIndex === index) ||
-                                      (isDeleteClientProblem && (current.phase === 'find_client' || current.phase === 'mark_for_delete' || current.phase === 'save_to_file') && current.i === index)
+                                      (isDeleteClientProblem && (current.phase === 'find_client' || current.phase === 'mark_for_delete' || current.phase === 'save_to_file') && current.i === index) ||
+                                      (isUpdateClientProblem && (current.phase === 'find_client' || current.phase === 'update_vector' || current.phase === 'save_to_file') && current.i === index)
                                       ? 'bg-yellow-300' : ''
                                   }`}>
                                       <span className="text-xs text-gray-500 w-4">{index}:</span>
@@ -898,6 +943,9 @@ ${mainBody}
                                           <span>{typeof item === 'object' ? `{${item.AccountNumber}, ${item.Name}}` : `"${item}"`}</span>
                                           {isDeleteClientProblem && typeof item === 'object' && item.MarkForDelete && (
                                               <span className="text-xs font-bold text-red-600 bg-red-100 px-1.5 py-0.5 rounded-full">DELETED</span>
+                                          )}
+                                          {isUpdateClientProblem && typeof item === 'object' && current.phase === 'update_vector' && current.i === index && (
+                                              <span className="text-xs font-bold text-green-600 bg-green-100 px-1.5 py-0.5 rounded-full">UPDATED</span>
                                           )}
                                       </span>
                                   </div>
