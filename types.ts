@@ -14,7 +14,7 @@ export interface Step {
   output?: string[];
   modified?: string;
   mem: string[];
-  phase?: 'upper' | 'lower' | 'read' | 'invert' | 'print' | 'sensitive' | 'insensitive' | 'convert' | 'check' | 'result' | 'left' | 'right' | 'all' | 'vector' | 'array';
+  phase?: 'upper' | 'lower' | 'read' | 'invert' | 'print' | 'sensitive' | 'insensitive' | 'convert' | 'check' | 'result' | 'left' | 'right' | 'all' | 'vector' | 'array' | 'split' | 'reverse';
 }
 
 export interface Problem {

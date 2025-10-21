@@ -191,6 +191,13 @@ const Visualizer: React.FC<VisualizerProps> = ({ problem }) => {
     cout << JoinString(arrString, 4, "${problem.example}") << endl;
             `;
             break;
+        case 18:
+            mainBody = `
+    string S1 = ${readStringFn ? readStringFn.name + "();" : "/* Read string logic here */"}
+    cout << "\\nString after reversing words:";
+    cout << "\\n" << ReverseWordsInString(S1) << endl;
+            `;
+            break;
         default:
             mainBody = `    // TODO: Implement main execution logic for this problem.`;
     }
@@ -269,6 +276,7 @@ ${mainBody}
   const isTrimProblem = problem.id === 15;
   const isJoinProblem = problem.id === 16;
   const isJoinOverloadProblem = problem.id === 17;
+  const isReverseWordsProblem = problem.id === 18;
 
 
   return (
@@ -362,7 +370,7 @@ ${mainBody}
                    </div>
                 ) : (
                   <div className="p-3 border rounded bg-white flex items-center justify-center min-h-[96px]">
-                    <div className="text-2xl font-bold mono p-4">{[12, 13, 14, 15].includes(problem.id) ? input : (charList[0] || '')}</div>
+                    <div className="text-2xl font-bold mono p-4">{[12, 13, 14, 15, 18].includes(problem.id) ? input : (charList[0] || '')}</div>
                   </div>
                 )}
             </div>
@@ -400,15 +408,17 @@ ${mainBody}
                 <div className="p-4 bg-sky-100 rounded text-center mono font-bold text-xl">{current.i === undefined || current.i < 0 ? 'START' : current.i}</div>
               </div>
 
-              {(isTrimProblem || isJoinOverloadProblem) && (() => {
+              {(isTrimProblem || isJoinOverloadProblem || isReverseWordsProblem) && (() => {
                   const phaseMap: {[key: string]: string} = {
                       left: 'Trim Left',
                       right: 'Trim Right',
                       all: 'Trim All',
                       vector: 'Vector Join',
-                      array: 'Array Join'
+                      array: 'Array Join',
+                      split: 'Splitting String',
+                      reverse: 'Reversing Words'
                   };
-                  const currentPhase = current.phase || (isTrimProblem ? 'left' : 'vector');
+                  const currentPhase = current.phase || (isTrimProblem ? 'left' : (isJoinOverloadProblem ? 'vector' : 'split'));
                   return (
                       <div className="card">
                           <div className="text-sm font-semibold mb-2">Current Operation</div>
@@ -566,7 +576,7 @@ ${mainBody}
                   )
               })()}
 
-              {isVectorProblem && (() => {
+              {(isVectorProblem || isReverseWordsProblem) && (() => {
                   let vectorItems: string[] = [];
                   if (current.mem) {
                       const memString = current.mem.join('|');
@@ -582,7 +592,7 @@ ${mainBody}
                           <div className="text-sm font-semibold mb-2">Live Vector</div>
                           <div className="paper text-sm space-y-1 p-2" style={{minHeight: 100, maxHeight: 200, overflowY: 'auto'}}>
                               {vectorItems.length > 0 ? vectorItems.map((item, index) => (
-                                  <div key={index} className="flex items-center gap-2">
+                                  <div key={index} className={`flex items-center gap-2 p-1 rounded transition-colors ${isReverseWordsProblem && current.phase === 'reverse' && current.i === index ? 'bg-yellow-300' : ''}`}>
                                       <span className="text-xs text-gray-500 w-4">{index}:</span>
                                       <span className="p-1 bg-sky-100 rounded text-xs mono w-full">"{item}"</span>
                                   </div>

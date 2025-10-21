@@ -1219,6 +1219,120 @@ function genJoinStringOverloadSteps(str: string): Step[] {
     return steps;
 }
 
+function genReverseWordsSteps(str: string): Step[] {
+  const steps: Step[] = [];
+  let s1 = str;
+  let vString: string[] = [];
+  const delim = " ";
+  let stepCounter = 0;
+
+  // --- Phase 1: Split ---
+  steps.push({
+    i: stepCounter++,
+    phase: 'split',
+    code: `vString = SplitString(S1, " ");`,
+    explanation: 'Start by splitting the input string into words and storing them in a vector.',
+    input: str,
+    modified: s1,
+    mem: [`vString=[]`]
+  });
+
+  const words = str.split(delim).filter(Boolean);
+  for (const word of words) {
+    vString.push(word);
+    steps.push({
+      i: stepCounter++,
+      phase: 'split',
+      code: `vString.push_back("${word}");`,
+      explanation: `Extracted word "${word}" and added it to the vector.`,
+      input: str,
+      modified: s1,
+      mem: [`vString=[${vString.join(',')}]`]
+    });
+  }
+
+  steps.push({
+    i: stepCounter++,
+    phase: 'split',
+    code: `// Splitting complete`,
+    explanation: `The string has been split into ${vString.length} words.`,
+    input: str,
+    modified: s1,
+    mem: [`vString=[${vString.join(',')}]`]
+  });
+
+  // --- Phase 2: Reverse ---
+  let S2 = "";
+  steps.push({
+    i: -1,
+    phase: 'reverse',
+    code: `vector<string>::iterator iter = vString.end();`,
+    explanation: 'Initialize an empty result string `S2` and an iterator pointing to the end of the vector.',
+    input: str,
+    modified: S2,
+    mem: [`S2 = ""`, `iterator at end`, `vString=[${vString.join(',')}]`]
+  });
+
+  for (let i = vString.length - 1; i >= 0; i--) {
+    const word = vString[i];
+    steps.push({
+      i: i, // Use vector index for highlighting
+      phase: 'reverse',
+      code: `--iter;`,
+      explanation: `Decrement iterator. It now points to the word "${word}".`,
+      input: str,
+      modified: S2,
+      mem: [`iterator at index ${i}`, `vString=[${vString.join(',')}]`]
+    });
+
+    const s2Before = S2;
+    S2 += word + " ";
+    steps.push({
+      i: i,
+      phase: 'reverse',
+      code: `S2 += *iter + " ";`,
+      explanation: `Append the word "${word}" and a space to the result string S2.`,
+      input: str,
+      modified: S2,
+      mem: [`S2 was: "${s2Before}"`, `S2 is now: "${S2}"`, `vString=[${vString.join(',')}]`]
+    });
+  }
+  
+  steps.push({
+      i: -1,
+      phase: 'reverse',
+      code: `// Loop finished`,
+      explanation: 'The reverse loop has finished. The string now has an extra space at the end.',
+      input: str,
+      modified: S2,
+      mem: [`Final looped string: "${S2}"`, `vString=[${vString.join(',')}]`]
+  });
+
+  const finalString = S2.trim();
+  steps.push({
+      i: -1,
+      phase: 'reverse',
+      code: `S2 = S2.substr(0, S2.length() - 1);`,
+      explanation: `Remove the trailing space from the result string.`,
+      input: str,
+      modified: finalString,
+      output: [finalString],
+      mem: [`Final result: "${finalString}"`, `vString=[${vString.join(',')}]`]
+  });
+
+  steps.push({
+    i: -1,
+    code: 'return S2;',
+    explanation: 'Program finished. Returning the reversed string.',
+    input: str,
+    modified: finalString,
+    output: [finalString],
+    mem: ['Done']
+  });
+
+  return steps;
+}
+
 
 export const problems: Problem[] = [
   { id: 1, title: 'Problem 1 — Print First Letter of Each Word', description: 'Read a string and print the first letter of every word.', example: 'programming is fun', generator: genPrintFirstLettersSteps, functions: [
@@ -1493,5 +1607,33 @@ export const problems: Problem[] = [
         }
     ],
     keyConcepts: ['Function Overloading', 'C-style Arrays', 'std::vector', 'String Concatenation']
+  },
+  {
+    id: 18,
+    title: 'Problem 18 — Reverse Words in a String',
+    description: 'Read a string and reverse the order of its words.',
+    example: 'Welcome to Jordan',
+    generator: genReverseWordsSteps,
+    functions: [
+      {
+        name: 'ReadString()',
+        signature: 'string ReadString()',
+        explanation: 'Reads a full line of text from the user.',
+        code: `string ReadString()\n{\n    string S1;\n    cout << "Please Enter Your String?\\n";\n    getline(cin, S1);\n    return S1;\n}`
+      },
+      {
+        name: 'SplitString(string S1, string Delim)',
+        signature: 'vector<string> SplitString(string S1, string Delim)',
+        explanation: 'Uses a while loop with find, substr, and erase to tokenize the string and stores each word in a vector. This is a prerequisite for reversing.',
+        code: `vector<string> SplitString(string S1, string Delim)\n{\n    vector<string> vString;\n    short pos = 0;\n    string sWord;\n    while ((pos = S1.find(Delim)) != std::string::npos)\n    {\n        sWord = S1.substr(0, pos);\n        if (sWord != "")\n        {\n            vString.push_back(sWord);\n        }\n        S1.erase(0, pos + Delim.length());\n    }\n    if (S1 != "")\n    {\n        vString.push_back(S1);\n    }\n    return vString;\n}`
+      },
+      {
+        name: 'ReverseWordsInString(string S1)',
+        signature: 'string ReverseWordsInString(string S1)',
+        explanation: 'Splits the string into a vector of words, then iterates through the vector backwards (using an iterator) to build the new reversed string.',
+        code: `string ReverseWordsInString(string S1)\n{\n    vector<string> vString;\n    string S2 = "";\n    vString = SplitString(S1, " ");\n    \n    vector<string>::iterator iter = vString.end();\n    \n    while (iter != vString.begin())\n    {\n        --iter;\n        S2 += *iter + " ";\n    }\n    \n    S2 = S2.substr(0, S2.length() - 1); //remove last space.\n    return S2;\n}`
+      }
+    ],
+    keyConcepts: ['std::vector', 'vector::iterator', 'Looping Backwards', 'String Tokenizing', 'Function Composition']
   }
 ];
