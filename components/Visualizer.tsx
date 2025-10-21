@@ -220,6 +220,19 @@ const Visualizer: React.FC<VisualizerProps> = ({ problem }) => {
     cout << RemovePunctuationsFromString(S1) << endl;
             `;
             break;
+        case 21:
+            mainBody = `
+    sClient Client;
+    Client.AccountNumber = "A1234";
+    Client.PinCode = "5678";
+    Client.Name = "Mohammed Abu-Hadhoud";
+    Client.Phone = "079000000";
+    Client.AccountBalance = 5124.88;
+    
+    cout << "\\nClient Record for Saving is: \\n";
+    cout << ConvertRecordToLine(Client, "${input}") << endl;
+            `;
+            break;
         default:
             mainBody = `    // TODO: Implement main execution logic for this problem.`;
     }
@@ -300,6 +313,15 @@ ${mainBody}
   const isJoinOverloadProblem = problem.id === 17;
   const isReverseWordsProblem = problem.id === 18;
   const isReplaceWordProblem = problem.id === 19;
+  const isStructToLineProblem = problem.id === 21;
+
+  const fixedClientData = {
+    AccountNumber: "A1234",
+    PinCode: "5678",
+    Name: "Mohammed Abu-Hadhoud",
+    Phone: "079000000",
+    AccountBalance: 5124.88
+  };
 
 
   return (
@@ -316,9 +338,9 @@ ${mainBody}
             </button>
         </div>
         <div className="mb-3">
-          <label className="text-xs font-medium">{[16, 17].includes(problem.id) ? 'Delimiter Input:' : isReplaceWordProblem ? 'Input (String|Find|Replace):' : 'Input:'}</label>
+          <label className="text-xs font-medium">{isStructToLineProblem ? 'Separator:' : [16, 17].includes(problem.id) ? 'Delimiter Input:' : isReplaceWordProblem ? 'Input (String|Find|Replace):' : 'Input:'}</label>
           <input value={input} onChange={e => setInput((problem.id === 5 || problem.id === 9) ? e.target.value.slice(0, 1) : e.target.value)} className="w-full mt-2 p-3 rounded text-lg mono bg-sky-50 border-2 border-cyan-300 focus:border-teal-500 focus:ring focus:ring-teal-200 focus:ring-opacity-50 transition-colors duration-200 ease-in-out" />
-          <div className="text-xs text-gray-500 mt-2">{[16, 17].includes(problem.id) ? `Try: "--" or ", "` : `Try: ${problem.example}`}</div>
+          <div className="text-xs text-gray-500 mt-2">{isStructToLineProblem ? 'This separator is used to join the struct fields. The client data is fixed for this visualization.' : [16, 17].includes(problem.id) ? `Try: "--" or ", "` : `Try: ${problem.example}`}</div>
         </div>
 
         <div className="flex flex-col sm:flex-row items-center justify-between mb-4 gap-2">
@@ -333,7 +355,7 @@ ${mainBody}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div className="lg:col-span-2">
             <div className="mb-4">
-              <div className="text-sm font-semibold mb-2">{isJoinProblem || isJoinOverloadProblem ? 'Input Collections (Fixed)' : 'Original Input (Read-Only)'}</div>
+              <div className="text-sm font-semibold mb-2">{isJoinProblem || isJoinOverloadProblem ? 'Input Collections (Fixed)' : isStructToLineProblem ? 'Client Data (Fixed sClient Struct)' : 'Original Input (Read-Only)'}</div>
                {isIndexedLoopProblem ? (
                   <div className="p-3 border rounded bg-white overflow-x-auto">
                     <table className="w-full border-collapse">
@@ -391,6 +413,17 @@ ${mainBody}
                        </div>
                      </div>
                    </div>
+                ) : isStructToLineProblem ? (
+                    <div className="p-4 border rounded-lg bg-white">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
+                            {Object.entries(fixedClientData).map(([key, value]) => (
+                                <div key={key}>
+                                    <div className="text-xs text-gray-500">{key}</div>
+                                    <div className="font-semibold mono bg-slate-50 p-1 rounded">{value.toString()}</div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
                 ) : (
                   <div className="p-3 border rounded bg-white flex items-center justify-center min-h-[96px]">
                     <div className="text-2xl font-bold mono p-4">{[12, 13, 14, 15, 18, 19, 20].includes(problem.id) ? (problem.id === 19 ? input.split('|')[0] : input) : (charList[0] || '')}</div>
@@ -409,7 +442,7 @@ ${mainBody}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <div className="text-xs text-gray-500 mb-1">Modified</div>
-                  <div className="p-3 bg-slate-100 rounded mono min-h-[44px]">{current.modified ?? input}</div>
+                  <div className="p-3 bg-slate-100 rounded mono min-h-[44px] break-all">{current.modified ?? (isStructToLineProblem ? '' : input)}</div>
                 </div>
                 <div>
                   <div className="text-xs text-gray-500 mb-1">Output / Collected</div>
@@ -451,6 +484,20 @@ ${mainBody}
                       </div>
                   );
               })()}
+              
+              {isStructToLineProblem && (
+                  <div className="card">
+                      <div className="text-sm font-semibold mb-2">Live sClient Data</div>
+                      <div className="paper text-sm space-y-1 p-2">
+                          {Object.entries(fixedClientData).map(([key, value]) => (
+                              <div key={key} className={`flex items-center gap-2 p-1 rounded transition-colors ${current.field === key ? 'bg-yellow-300' : ''}`}>
+                                  <span className="text-xs text-gray-600 font-semibold w-2/5">{key}:</span>
+                                  <span className="p-1 bg-sky-100 rounded text-xs mono w-full break-all">"{value.toString()}"</span>
+                              </div>
+                          ))}
+                      </div>
+                  </div>
+              )}
 
               {isFirstLetterFlag && (
                 <div className="card">

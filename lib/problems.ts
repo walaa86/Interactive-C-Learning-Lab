@@ -1481,6 +1481,95 @@ function genRemovePunctuationsSteps(str: string): Step[] {
   return steps;
 }
 
+function genStructToLineSteps(separator: string): Step[] {
+  const Client = {
+    AccountNumber: "A1234",
+    PinCode: "5678",
+    Name: "Mohammed Abu-Hadhoud",
+    Phone: "079000000",
+    AccountBalance: 5124.88
+  };
+  
+  const steps: Step[] = [];
+  let stClientRecord = "";
+
+  steps.push({
+    i: 0,
+    code: `string stClientRecord = "";`,
+    explanation: "Start with a fixed client data record and initialize an empty string to build the record line.",
+    input: separator,
+    modified: "",
+    mem: [`stClientRecord = ""`]
+  });
+
+  stClientRecord += Client.AccountNumber + separator;
+  steps.push({
+    i: 1,
+    field: 'AccountNumber',
+    code: `stClientRecord += Client.AccountNumber + Seperator;`,
+    explanation: `Append Account Number ("${Client.AccountNumber}") and the separator.`,
+    input: separator,
+    modified: stClientRecord,
+    mem: [`stClientRecord is now "${stClientRecord}"`]
+  });
+
+  stClientRecord += Client.PinCode + separator;
+  steps.push({
+    i: 2,
+    field: 'PinCode',
+    code: `stClientRecord += Client.PinCode + Seperator;`,
+    explanation: `Append Pin Code ("${Client.PinCode}") and the separator.`,
+    input: separator,
+    modified: stClientRecord,
+    mem: [`stClientRecord is now "${stClientRecord}"`]
+  });
+
+  stClientRecord += Client.Name + separator;
+  steps.push({
+    i: 3,
+    field: 'Name',
+    code: `stClientRecord += Client.Name + Seperator;`,
+    explanation: `Append Name ("${Client.Name}") and the separator.`,
+    input: separator,
+    modified: stClientRecord,
+    mem: [`stClientRecord is now "${stClientRecord}"`]
+  });
+
+  stClientRecord += Client.Phone + separator;
+  steps.push({
+    i: 4,
+    field: 'Phone',
+    code: `stClientRecord += Client.Phone + Seperator;`,
+    explanation: `Append Phone ("${Client.Phone}") and the separator.`,
+    input: separator,
+    modified: stClientRecord,
+    mem: [`stClientRecord is now "${stClientRecord}"`]
+  });
+
+  stClientRecord += Client.AccountBalance.toString();
+  steps.push({
+    i: 5,
+    field: 'AccountBalance',
+    code: `stClientRecord += to_string(Client.AccountBalance);`,
+    explanation: `Convert Account Balance (${Client.AccountBalance}) to string and append it. This is the last field, so no separator is added.`,
+    input: separator,
+    modified: stClientRecord,
+    mem: [`stClientRecord is now "${stClientRecord}"`]
+  });
+
+  steps.push({
+    i: 6,
+    code: `return stClientRecord;`,
+    explanation: "The function returns the final, complete client record as a single line.",
+    input: separator,
+    modified: stClientRecord,
+    output: [stClientRecord],
+    mem: [`Final record: "${stClientRecord}"`]
+  });
+
+  return steps;
+}
+
 
 export const problems: Problem[] = [
   { id: 1, title: 'Problem 1 — Print First Letter of Each Word', description: 'Read a string and print the first letter of every word.', example: 'programming is fun', generator: genPrintFirstLettersSteps, functions: [
@@ -1815,5 +1904,21 @@ export const problems: Problem[] = [
         }
     ],
     keyConcepts: ['String Iteration', 'ispunct()', 'String Concatenation', 'cctype library', 'Building Strings']
+  },
+  {
+    id: 21,
+    title: 'Problem 21 — Convert Struct Record to Line',
+    description: 'Visualize the process of converting a struct of client data into a single delimited string for saving.',
+    example: '#//#',
+    generator: genStructToLineSteps,
+    functions: [
+        {
+            name: 'ConvertRecordToLine',
+            signature: 'string ConvertRecordToLine(sClient Client, string Seperator)',
+            explanation: 'Takes a client struct and concatenates its fields (AccountNumber, PinCode, Name, Phone, AccountBalance) into a single string, separated by the provided delimiter.',
+            code: `struct sClient\n{\n    string AccountNumber;\n    string PinCode;\n    string Name;\n    string Phone;\n    double AccountBalance;\n};\n\nstring ConvertRecordToLine(sClient Client, string Seperator = "#//#")\n{\n    string stClientRecord = "";\n    stClientRecord += Client.AccountNumber + Seperator;\n    stClientRecord += Client.PinCode + Seperator;\n    stClientRecord += Client.Name + Seperator;\n    stClientRecord += Client.Phone + Seperator;\n    stClientRecord += to_string(Client.AccountBalance);\n    return stClientRecord;\n}`
+        }
+    ],
+    keyConcepts: ['struct', 'Data Serialization', 'String Concatenation', 'to_string()', 'Delimiters']
   }
 ];

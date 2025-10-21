@@ -15,6 +15,7 @@ export interface Step {
   modified?: string;
   mem: string[];
   phase?: 'upper' | 'lower' | 'read' | 'invert' | 'print' | 'sensitive' | 'insensitive' | 'convert' | 'check' | 'result' | 'left' | 'right' | 'all' | 'vector' | 'array' | 'split' | 'reverse';
+  field?: 'AccountNumber' | 'PinCode' | 'Name' | 'Phone' | 'AccountBalance';
 }
 
 export interface Problem {
