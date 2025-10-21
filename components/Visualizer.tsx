@@ -19,6 +19,7 @@ const Visualizer: React.FC<VisualizerProps> = ({ problem }) => {
   const [paper, setPaper] = useState(false);
   const [notes, setNotes] = useState<string[]>([]);
   const [memory, setMemory] = useState<MemoryItem[]>([]);
+  const [revealedHints, setRevealedHints] = useState<number[]>([]);
 
   useEffect(() => {
     if (window.lucide) {
@@ -30,8 +31,9 @@ const Visualizer: React.FC<VisualizerProps> = ({ problem }) => {
     doReset();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [input, problem]);
-
+  
   const current = steps[pos] || steps[0];
+  const prevStep = pos > 0 ? steps[pos - 1] : null;
   const stringPart = (problem.id === 7 || problem.id === 8 || problem.id === 19) && input.includes('|') ? input.split('|')[0] : input;
   const charList = (stringPart || '').split('');
 
@@ -346,19 +348,26 @@ ${mainBody}
   const goNext = () => {
     if (pos < steps.length - 1) {
       const newPos = pos + 1;
-      setPos(newPos);
       const nextStep = steps[newPos];
       if (paper && nextStep?.mem.length) {
         setNotes(n => [...n, ...nextStep.mem.map(m => `[step ${newPos + 1}] ${m}`)]);
       }
-      if (nextStep) {
+       if (nextStep) {
         if (nextStep.modified) setMemory(m => [...m, { t: Date.now(), note: `Var="${nextStep.modified}"` }]);
         if (nextStep.mem.length) setMemory(m => [...m, ...nextStep.mem.map(note => ({ t: Date.now(), note }))]);
       }
+      setPos(newPos);
     }
   };
 
-  const goPrev = () => setPos(p => Math.max(0, p - 1));
+  const goPrev = () => {
+      if (pos > 0) {
+          const prevStepToGo = steps[pos-1];
+          const memToRemoveCount = (prevStepToGo.modified ? 1 : 0) + prevStepToGo.mem.length;
+          setMemory(m => m.slice(0, m.length - memToRemoveCount));
+          setPos(p => p - 1);
+      }
+  };
 
   const doReset = () => {
     const newSteps = problem.generator(input);
@@ -366,11 +375,30 @@ ${mainBody}
     setPos(0);
     setNotes([]);
     setMemory([]);
+    setRevealedHints([]);
   };
 
   const jumpToIndex = (idx: number) => {
     const stepIndex = steps.findIndex(s => s.i === idx && (s.code.toLowerCase().includes('if') || s.code.toLowerCase().includes('check') || s.code.toLowerCase().includes('s1')));
-    if (stepIndex !== -1) setPos(stepIndex);
+    if (stepIndex !== -1 && stepIndex > pos) {
+        // To animate memory correctly when jumping forward, we need to add all intermediate steps.
+        const stepsToAdd = steps.slice(pos + 1, stepIndex + 1);
+        const newMemoryItems = stepsToAdd.flatMap(step => [
+            ...(step.modified ? [{ t: Date.now(), note: `Var="${step.modified}"` }] : []),
+            ...step.mem.map(note => ({ t: Date.now(), note }))
+        ]);
+        setMemory(m => [...m, ...newMemoryItems]);
+        setPos(stepIndex);
+    } else if (stepIndex !== -1) {
+        // Jumping back, just reset.
+        doReset();
+    }
+  };
+
+  const revealNextHint = () => {
+    if (problem.hints && revealedHints.length < problem.hints.length) {
+      setRevealedHints(prev => [...prev, prev.length]);
+    }
   };
 
   const isFirstLetterFlag = current.mem?.find(m => m.includes('isFirst'));
@@ -404,11 +432,61 @@ ${mainBody}
     AccountBalance: 5124.88
   };
 
+  // Animation helpers
+  const isConditional = /condition is|result is|match:|is it|checking if/i.test(current.explanation);
+  const isTrue = /true|yes|match found/i.test(current.explanation);
+  let conditionalClass = '';
+  if (isConditional) {
+      conditionalClass = isTrue ? 'shadow-lg shadow-green-500/20' : 'shadow-lg shadow-red-500/20';
+  }
+
+  const prevModified = prevStep?.modified ?? '';
+  const currentModified = current.modified ?? '';
+  const modifiedChars = currentModified.split('').map((char, index) => {
+    const isChanged = char !== prevModified[index] || index >= prevModified.length;
+    return (
+      <span key={index} className={isChanged && pos > 0 ? 'char-changed' : ''}>{char}</span>
+    );
+  });
+
+  const extractValue = (step: Step | null, regex: RegExp, defaultValue: string = '0'): string => {
+    if (!step?.mem) return defaultValue;
+    const memString = step.mem.join('|');
+    const matches = memString.match(regex);
+    if (matches && matches.length > 0) return matches[matches.length - 1];
+    return defaultValue;
+  }
 
   return (
     <div className="card">
       <h2 className="text-xl font-bold">{problem.title}</h2>
       <p className="text-sm text-gray-600 mt-1">{problem.description}</p>
+
+      {problem.hints && problem.hints.length > 0 && (
+        <div className="card mt-4 bg-sky-50">
+          <h3 className="text-sm font-semibold mb-2 flex items-center gap-2">
+            <Icon name="lightbulb" />
+            Hints
+          </h3>
+          <div className="space-y-2">
+            {revealedHints.map((hintIndex) => (
+              <div key={hintIndex} className="paper text-sm p-3 item-enter bg-white">
+                <strong>Hint {hintIndex + 1}:</strong> {problem.hints?.[hintIndex]}
+              </div>
+            ))}
+          </div>
+          {revealedHints.length < (problem.hints?.length || 0) && (
+            <button
+              onClick={revealNextHint}
+              className="mt-3 flex items-center gap-2 px-3 py-1.5 text-xs bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors font-semibold disabled:bg-amber-300"
+              disabled={revealedHints.length >= (problem.hints?.length || 0)}
+            >
+              <Icon name="sparkles" size={14} />
+              Show a Hint
+            </button>
+          )}
+        </div>
+      )}
 
       <div className="mt-4 card">
         <div className="flex items-center justify-between mb-2">
@@ -519,8 +597,11 @@ ${mainBody}
 
             <div className="mb-4">
               <div className="text-sm font-semibold mb-2">Execution Line</div>
-              <div className="codebox mono text-sm p-4">{current.code || '(no code)'}</div>
-              <div className="mt-3 text-sm text-gray-700 min-h-[20px]">{current.explanation}</div>
+              <div className={`codebox mono text-sm p-4 ${conditionalClass}`}>{current.code || '(no code)'}</div>
+              <div className="mt-3 text-sm text-gray-700 min-h-[20px] flex items-center gap-2">
+                {isConditional && (isTrue ? <Icon name="check-circle" className="text-green-500" /> : <Icon name="x-circle" className="text-red-500" />)}
+                <span>{current.explanation}</span>
+              </div>
             </div>
 
             <div className="mb-4">
@@ -528,11 +609,11 @@ ${mainBody}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <div className="text-xs text-gray-500 mb-1">Modified</div>
-                  <div className="p-3 bg-slate-100 rounded mono min-h-[44px] break-all">{current.modified ?? ((isStructToLineProblem || isLineToStructProblem || isFileBasedProblem) ? '' : input)}</div>
+                  <div className="p-3 bg-slate-100 rounded mono min-h-[44px] whitespace-pre-wrap break-words">{modifiedChars}</div>
                 </div>
                 <div>
                   <div className="text-xs text-gray-500 mb-1">Output / Collected</div>
-                  <div className="p-3 bg-slate-100 rounded mono min-h-[44px] whitespace-pre-wrap">{current.output ? (current.output.length ? current.output.join('') : '<empty>') : '<none>'}</div>
+                  <div key={pos} className={`p-3 bg-slate-100 rounded mono min-h-[44px] whitespace-pre-wrap ${current.output && pos > 0 ? 'item-enter' : ''}`}>{current.output ? (current.output.length ? current.output.join('') : '<empty>') : '<none>'}</div>
                 </div>
               </div>
             </div>
@@ -743,25 +824,23 @@ ${mainBody}
               )}
 
               {isCounterProblem && (() => {
-                  let capitalCount = '0', smallCount = '0';
-                  if(current.mem) {
-                    const memString = current.mem.join('|');
-                    const capMatch = memString.match(/capitalCount=(\d+)/g);
-                    const smlMatch = memString.match(/smallCount=(\d+)/g);
-                    if (capMatch) capitalCount = capMatch[capMatch.length - 1].split('=')[1];
-                    if (smlMatch) smallCount = smlMatch[smlMatch.length - 1].split('=')[1];
-                  }
+                  const getCounts = (step: Step | null) => ({
+                    capitalCount: extractValue(step, /(?<=capitalCount=)\d+/),
+                    smallCount: extractValue(step, /(?<=smallCount=)\d+/),
+                  });
+                  const { capitalCount, smallCount } = getCounts(current);
+                  const { capitalCount: prevCapital, smallCount: prevSmall } = getCounts(prevStep);
                   return (
                       <div className="card">
                           <div className="text-sm font-semibold mb-2">Live Counters</div>
                           <div className="grid grid-cols-2 gap-2 text-center">
                               <div>
                                   <div className="text-xs text-gray-500">Capital</div>
-                                  <div className="p-2 bg-blue-100 rounded mt-1 font-bold text-lg">{capitalCount}</div>
+                                  <div className={`p-2 bg-blue-100 rounded mt-1 font-bold text-lg ${capitalCount !== prevCapital && pos > 0 ? 'value-update' : ''}`}>{capitalCount}</div>
                               </div>
                               <div>
                                   <div className="text-xs text-gray-500">Small</div>
-                                  <div className="p-2 bg-green-100 rounded mt-1 font-bold text-lg">{smallCount}</div>
+                                  <div className={`p-2 bg-green-100 rounded mt-1 font-bold text-lg ${smallCount !== prevSmall && pos > 0 ? 'value-update' : ''}`}>{smallCount}</div>
                               </div>
                           </div>
                       </div>
@@ -769,15 +848,12 @@ ${mainBody}
               })()}
 
               {isSpecificCounterProblem && (() => {
-                  let targetChar = '?';
-                  let count = '0';
-                  if (current.mem) {
-                      const memString = current.mem.join('|');
-                      const targetMatch = memString.match(/target='(.*?)'/);
-                      const countMatch = memString.match(/count=(\d+)/g);
-                      if (targetMatch) targetChar = targetMatch[1];
-                      if (countMatch) count = countMatch[countMatch.length - 1].split('=')[1];
-                  }
+                  const getTrace = (step: Step | null) => ({
+                    targetChar: extractValue(step, /(?<=target=')(.)(?=')/, '?'),
+                    count: extractValue(step, /(?<=count=)\d+/),
+                  });
+                  const { targetChar, count } = getTrace(current);
+                  const { count: prevCount } = getTrace(prevStep);
                   return (
                       <div className="card">
                           <div className="text-sm font-semibold mb-2">Live Trace</div>
@@ -788,7 +864,7 @@ ${mainBody}
                               </div>
                               <div>
                                   <div className="text-xs text-gray-500">Count</div>
-                                  <div className="p-2 bg-green-100 rounded mt-1 font-bold text-lg">{count}</div>
+                                  <div className={`p-2 bg-green-100 rounded mt-1 font-bold text-lg ${count !== prevCount && pos > 0 ? 'value-update' : ''}`}>{count}</div>
                               </div>
                           </div>
                       </div>
@@ -797,24 +873,22 @@ ${mainBody}
 
               {isCaseInsensitiveCounterProblem && (() => {
                   const targetChar = (input.split('|')[1] || '?')[0];
-                  
                   const finalSensitiveStep = steps.find(s => s.phase === 'sensitive' && s.i === (input.split('|')[0] || '').length);
-                  const finalSensitiveMem = finalSensitiveStep?.mem.join('|') || '';
-                  const finalSensitiveMatch = finalSensitiveMem.match(/count=(\d+)/);
-                  const finalSensitiveCount = finalSensitiveMatch ? finalSensitiveMatch[1] : '0';
-
-                  let sensitiveCount = '0';
-                  let insensitiveCount = '0';
+                  const finalSensitiveCount = extractValue(finalSensitiveStep, /(?<=count=)\d+/);
+                  
+                  const getCount = (step: Step | null) => extractValue(step, /(?<=count=)\d+/);
+                  
+                  let sensitiveCount = '0', insensitiveCount = '0';
+                  let prevSensitiveCount = '0', prevInsensitiveCount = '0';
 
                   if (current.phase === 'sensitive') {
-                      const memString = current.mem.join('|');
-                      const countMatch = memString.match(/count=(\d+)/);
-                      sensitiveCount = countMatch ? countMatch[1] : '0';
-                  } else { // 'insensitive' or end phase
+                      sensitiveCount = getCount(current);
+                      prevSensitiveCount = getCount(prevStep);
+                  } else { 
                       sensitiveCount = finalSensitiveCount;
-                      const memString = current.mem.join('|');
-                      const countMatch = memString.match(/count=(\d+)/);
-                      insensitiveCount = countMatch ? countMatch[1] : '0';
+                      prevSensitiveCount = finalSensitiveCount;
+                      insensitiveCount = getCount(current);
+                      prevInsensitiveCount = getCount(prevStep);
                   }
 
                   return (
@@ -827,11 +901,11 @@ ${mainBody}
                           <div className="grid grid-cols-2 gap-2 text-center">
                               <div>
                                   <div className="text-xs text-gray-500">Case-Sensitive</div>
-                                  <div className="p-2 bg-blue-100 rounded mt-1 font-bold text-lg">{sensitiveCount}</div>
+                                  <div className={`p-2 bg-blue-100 rounded mt-1 font-bold text-lg ${sensitiveCount !== prevSensitiveCount && pos > 0 ? 'value-update' : ''}`}>{sensitiveCount}</div>
                               </div>
                               <div>
                                   <div className="text-xs text-gray-500">Case-Insensitive</div>
-                                  <div className="p-2 bg-green-100 rounded mt-1 font-bold text-lg">{insensitiveCount}</div>
+                                  <div className={`p-2 bg-green-100 rounded mt-1 font-bold text-lg ${insensitiveCount !== prevInsensitiveCount && pos > 0 ? 'value-update' : ''}`}>{insensitiveCount}</div>
                               </div>
                           </div>
                           <div className="text-xs text-gray-500 mt-2 text-center p-2 bg-sky-50 rounded">
@@ -842,19 +916,15 @@ ${mainBody}
               })()}
 
               {isVowelCounterProblem && (() => {
-                  let count = '0';
-                  if (current.mem) {
-                      const memString = current.mem.join('|');
-                      const countMatch = memString.match(/count=(\d+)/g);
-                      if (countMatch) count = countMatch[countMatch.length - 1].split('=')[1];
-                  }
+                  const count = extractValue(current, /(?<=count=)\d+/);
+                  const prevCount = extractValue(prevStep, /(?<=count=)\d+/);
                   return (
                       <div className="card">
                           <div className="text-sm font-semibold mb-2">Live Vowel Counter</div>
                           <div className="grid grid-cols-1 gap-2 text-center">
                               <div>
                                   <div className="text-xs text-gray-500">Vowels Found</div>
-                                  <div className="p-2 bg-rose-100 rounded mt-1 font-bold text-lg">{count}</div>
+                                  <div className={`p-2 bg-rose-100 rounded mt-1 font-bold text-lg ${count !== prevCount && pos > 0 ? 'value-update' : ''}`}>{count}</div>
                               </div>
                           </div>
                       </div>
@@ -862,19 +932,15 @@ ${mainBody}
               })()}
 
               {isWordCounterProblem && (() => {
-                  let count = '0';
-                  if (current.mem) {
-                      const memString = current.mem.join('|');
-                      const countMatch = memString.match(/Counter=(\d+)/g);
-                      if (countMatch) count = countMatch[countMatch.length - 1].split('=')[1];
-                  }
+                  const count = extractValue(current, /(?<=Counter=)\d+/);
+                  const prevCount = extractValue(prevStep, /(?<=Counter=)\d+/);
                   return (
                       <div className="card">
                           <div className="text-sm font-semibold mb-2">Live Word Counter</div>
                           <div className="grid grid-cols-1 gap-2 text-center">
                               <div>
                                   <div className="text-xs text-gray-500">Words Found</div>
-                                  <div className="p-2 bg-fuchsia-100 rounded mt-1 font-bold text-lg">{count}</div>
+                                  <div className={`p-2 bg-fuchsia-100 rounded mt-1 font-bold text-lg ${count !== prevCount && pos > 0 ? 'value-update' : ''}`}>{count}</div>
                               </div>
                           </div>
                       </div>
@@ -882,15 +948,10 @@ ${mainBody}
               })()}
               
               {isReplaceWordProblem && (() => {
-                  let find = '?', replace = '?', pos = '?';
                   const parts = input.split('|');
-                  find = parts[1] || '?';
-                  replace = parts[2] || '?';
-                  if (current.mem) {
-                      const memString = current.mem.join('|');
-                      const posMatch = memString.match(/pos\s*=\s*(-?\d+)/);
-                      if (posMatch) pos = posMatch[1];
-                  }
+                  const find = parts[1] || '?';
+                  const replace = parts[2] || '?';
+                  const posVal = extractValue(current, /(?<=pos\s*=\s*)(-?\d+)/, '?');
                   return (
                       <div className="card">
                           <div className="text-sm font-semibold mb-2">Live Trace</div>
@@ -905,7 +966,7 @@ ${mainBody}
                               </div>
                               <div>
                                   <div className="text-xs text-gray-500">Position (pos)</div>
-                                  <div className="p-2 bg-sky-100 rounded mt-1 font-bold text-base mono">{pos}</div>
+                                  <div className="p-2 bg-sky-100 rounded mt-1 font-bold text-base mono">{posVal}</div>
                               </div>
                           </div>
                       </div>
@@ -925,31 +986,35 @@ ${mainBody}
                           vectorItems = [];
                       }
                   }
+                  const prevVectorItems = prevStep?.vectorContents || [];
                   return (
                       <div className="card">
                           <div className="text-sm font-semibold mb-2">Live Vector {isFileBasedProblem ? `(vClients)`: ''}</div>
                           <div className="paper text-sm space-y-1 p-2" style={{minHeight: 100, maxHeight: 200, overflowY: 'auto'}}>
-                              {vectorItems.length > 0 ? vectorItems.map((item, index) => (
-                                  <div key={index} className={`flex items-center gap-2 p-1 rounded transition-colors ${
+                              {vectorItems.length > 0 ? vectorItems.map((item, index) => {
+                                const isNew = index >= prevVectorItems.length;
+                                const isUpdated = isUpdateClientProblem && current.phase === 'update_vector' && current.i === index;
+                                return (
+                                  <div key={index} className={`flex items-center gap-2 p-1 rounded transition-colors ${isNew && pos > 0 ? 'item-enter' : ''} ${
                                       (isReverseWordsProblem && current.phase === 'reverse' && current.i === index) ||
                                       (isLineToStructProblem && current.phase === 'assign' && current.i === index) ||
                                       (isFindClientProblem && current.phase === 'search_vector' && current.search?.currentIndex === index) ||
                                       (isDeleteClientProblem && (current.phase === 'find_client' || current.phase === 'mark_for_delete' || current.phase === 'save_to_file') && current.i === index) ||
                                       (isUpdateClientProblem && (current.phase === 'find_client' || current.phase === 'update_vector' || current.phase === 'save_to_file') && current.i === index)
                                       ? 'bg-yellow-300' : ''
-                                  }`}>
+                                  } ${isUpdated ? 'value-update' : ''}`}>
                                       <span className="text-xs text-gray-500 w-4">{index}:</span>
                                       <span className="p-1 bg-sky-100 rounded text-xs mono w-full flex justify-between items-center">
                                           <span>{typeof item === 'object' ? `{${item.AccountNumber}, ${item.Name}}` : `"${item}"`}</span>
                                           {isDeleteClientProblem && typeof item === 'object' && item.MarkForDelete && (
                                               <span className="text-xs font-bold text-red-600 bg-red-100 px-1.5 py-0.5 rounded-full">DELETED</span>
                                           )}
-                                          {isUpdateClientProblem && typeof item === 'object' && current.phase === 'update_vector' && current.i === index && (
+                                          {isUpdated && (
                                               <span className="text-xs font-bold text-green-600 bg-green-100 px-1.5 py-0.5 rounded-full">UPDATED</span>
                                           )}
                                       </span>
                                   </div>
-                              )) : <div className="text-gray-500 italic text-xs">Vector is empty.</div>}
+                              )}) : <div className="text-gray-500 italic text-xs">Vector is empty.</div>}
                           </div>
                       </div>
                   )
@@ -977,7 +1042,12 @@ ${mainBody}
               <div className="card">
                 <div className="text-sm font-semibold mb-2">Simulated Memory</div>
                 <div style={{ maxHeight: 220, overflowY: 'auto' }} className="text-xs mono space-y-1">
-                  {memory.length === 0 ? <div className="text-gray-500 italic">Memory empty. Step through to populate.</div> : memory.slice(-30).reverse().map((m, i) => (<div key={m.t + i}>• {new Date(m.t).toLocaleTimeString()} — {m.note}</div>))}
+                  {memory.length === 0 ? <div className="text-gray-500 italic">Memory empty. Step through to populate.</div> : memory.slice(-30).reverse().map((m, i) => {
+                      const lastAddedCount = (current.modified ? 1 : 0) + current.mem.length;
+                      return (
+                          <div key={m.t + i} className={i < lastAddedCount && pos > 0 ? 'item-enter' : ''}>• {new Date(m.t).toLocaleTimeString()} — {m.note}</div>
+                      )
+                  })}
                 </div>
               </div>
             </div>

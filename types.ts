@@ -36,7 +36,7 @@ export interface Step {
     client?: any;
   };
   update?: {
-    target: string;
+    target:string;
     found: boolean;
     confirmed: boolean | null;
     clientBefore?: any;
@@ -52,4 +52,5 @@ export interface Problem {
   generator: (str: string) => Step[];
   functions: FunctionDef[];
   keyConcepts: string[];
+  hints?: string[];
 }

@@ -2659,32 +2659,73 @@ export const problems: Problem[] = [
   { id: 1, title: 'Problem 1 — Print First Letter of Each Word', description: 'Read a string and print the first letter of every word.', example: 'programming is fun', generator: genPrintFirstLettersSteps, functions: [
     {name: 'ReadString()', signature: 'string ReadString()', explanation: 'Reads a full line including spaces.', code: `string ReadString()\n{\n    string S1;\n    getline(cin, S1);\n    return S1;\n}`},
     {name: 'PrintFirstLetterOfEachWord(string S1)', signature: 'void PrintFirstLetterOfEachWord(string S1)', explanation: 'Uses a boolean flag to detect word starts.', code: `void PrintFirstLetterOfEachWord(string S1)\n{\n    bool isFirstLetter = true;\n    for(short i=0;i<S1.length();i++){\n        if(S1[i] != ' ' && isFirstLetter) cout << S1[i];\n        isFirstLetter = (S1[i] == ' ' ? true : false);\n    }\n}`}
-  ], keyConcepts: ['String Iteration', 'Boolean Flags', 'Conditional Logic', 'Character I/O']},
+  ], keyConcepts: ['String Iteration', 'Boolean Flags', 'Conditional Logic', 'Character I/O'],
+  hints: [
+      'You need a way to remember if the previous character was a space.',
+      'A boolean flag (e.g., `isFirstLetter`) can track this state.',
+      'Inside the loop, check two conditions: is the character not a space, AND is the `isFirstLetter` flag true?',
+      'After checking a character, update the flag for the *next* iteration. The flag should be true only if the *current* character is a space.'
+  ]},
   { id: 2, title: 'Problem 2 — Uppercase First Letter of Each Word', description: 'Uppercase the first character of each word in the input.', example: 'hello world', generator: genUpperFirstSteps, functions: [
     {name: 'UpperFirstLetterOfEachWord', signature: 'string UpperFirstLetterOfEachWord(string S1)', explanation: 'Uses toupper on flagged positions.', code: `string UpperFirstLetterOfEachWord(string S1)\n{\n    bool isFirstLetter = true;\n    for(short i=0;i<S1.length();i++){\n        if(S1[i] != ' ' && isFirstLetter) S1[i] = toupper(S1[i]);\n        isFirstLetter = (S1[i] == ' ' ? true : false);\n    }\n    return S1;\n}`}
-  ], keyConcepts: ['String Modification', 'Boolean Flags', 'toupper()', 'By-Value vs By-Reference']},
+  ], keyConcepts: ['String Modification', 'Boolean Flags', 'toupper()', 'By-Value vs By-Reference'],
+  hints: [
+      'The logic is nearly identical to the previous problem (printing the first letter).',
+      'Instead of printing the character with `cout`, modify it in place.',
+      'The `toupper()` function from the `<cctype>` library will convert a character to its uppercase equivalent.',
+      'Remember to assign the result back to the string: `S1[i] = toupper(S1[i]);`'
+  ]},
   { id: 3, title: 'Problem 3 — Lowercase First Letter of Each Word', description: 'Lowercase the first character of each word in the input.', example: 'HELLO WORLD', generator: genLowerFirstSteps, functions: [
     {name: 'LowerFirstLetterOfEachWord', signature: 'string LowerFirstLetterOfEachWord(string S1)', explanation: 'Uses tolower on flagged positions.', code: `string LowerFirstLetterOfEachWord(string S1)\n{\n    bool isFirstLetter = true;\n    for(short i=0;i<S1.length();i++){\n        if(S1[i] != ' ' && isFirstLetter) S1[i] = tolower(S1[i]);\n        isFirstLetter = (S1[i] == ' ' ? true : false);\n    }\n    return S1;\n}`}
-  ], keyConcepts: ['String Modification', 'Boolean Flags', 'tolower()', 'Standard Library Functions']},
+  ], keyConcepts: ['String Modification', 'Boolean Flags', 'tolower()', 'Standard Library Functions'],
+   hints: [
+      'This problem is a variation of the previous one.',
+      'Instead of `toupper()`, use the `tolower()` function to convert characters to lowercase.',
+      'The boolean flag logic for detecting the start of a word remains exactly the same.'
+  ]},
   { id: 4, title: 'Problem 4 — Upper All then Lower All Letters', description: 'Read a string, print it uppercased, then print it lowercased.', example: 'Hello World', generator: genUpperThenLowerSteps, functions: [
     {name: 'ReadString()', signature: 'string ReadString()', explanation: 'Reads the full line.', code: `string ReadString()\n{\n    string S1;\n    getline(cin, S1);\n    return S1;\n}`},
     {name: 'UpperAllString', signature: 'string UpperAllString(string S1)', explanation: 'Makes every char uppercase using toupper.', code: `string UpperAllString(string S1)\n{\n    for(short i=0;i<S1.length();i++) S1[i] = toupper(S1[i]);\n    return S1;\n}`},
     {name: 'LowerAllString', signature: 'string LowerAllString(string S1)', explanation: 'Makes every char lowercase using tolower.', code: `string LowerAllString(string S1)\n{\n    for(short i=0;i<S1.length();i++) S1[i] = tolower(S1[i]);\n    return S1;\n}`}
-  ], keyConcepts: ['Looping', 'Case Conversion', 'Multiple Operations', 'Sequential Execution']},
+  ], keyConcepts: ['Looping', 'Case Conversion', 'Multiple Operations', 'Sequential Execution'],
+  hints: [
+      'You will need two separate loops for this task.',
+      'The first loop should iterate through the string and apply `toupper()` to every character.',
+      'The second loop should do the same, but with `tolower()`.',
+      'You can create two separate functions to keep the code clean: one for uppercasing and one for lowercasing.'
+  ]},
   { id: 5, title: 'Problem 5 — Invert Letter Case', description: 'Read a single character, invert its case (upper to lower, lower to upper), and print the result.', example: 'a', generator: genInvertCaseSteps, functions: [
     { name: 'ReadChar()', signature: 'char ReadChar()', explanation: 'Reads a single character from the input.', code: `char ReadChar()\n{\n    char Ch1;\n    cout << "Please Enter a Character?\\n";\n    cin >> Ch1;\n    return Ch1;\n}` },
     { name: 'InvertLetterCase(char char1)', signature: 'char InvertLetterCase(char char1)', explanation: 'Checks if a character is uppercase. If so, it converts it to lowercase. Otherwise, it converts it to uppercase.', code: `char InvertLetterCase(char char1)\n{\n    return isupper(char1) ? tolower(char1) : toupper(char1);\n}` }
-  ], keyConcepts: ['Character I/O', 'Ternary Operator', 'Case Conversion', 'ASCII Values'] },
+  ], keyConcepts: ['Character I/O', 'Ternary Operator', 'Case Conversion', 'ASCII Values'],
+  hints: [
+      'First, you need to determine if the character is currently uppercase or lowercase.',
+      'The `isupper()` function from `<cctype>` returns true if a character is uppercase.',
+      'A simple `if/else` statement or a ternary operator (`condition ? value_if_true : value_if_false`) is perfect for this.',
+      'If `isupper()` is true, use `tolower()`. Otherwise, use `toupper()`.'
+  ]},
   { id: 6, title: 'Problem 6 — Count Small/Capital Letters', description: 'Read a string and count the number of lowercase and uppercase letters.', example: 'Hello World', generator: genCountCaseSteps, functions: [
     { name: 'ReadString()', signature: 'string ReadString()', explanation: 'Reads a full line including spaces.', code: `string ReadString()\n{\n    string S1;\n    cout << "Please Enter Your String?\\n";\n    getline(cin, S1);\n    return S1;\n}` },
     { name: 'CountCapitalLetters(string S1)', signature: 'short CountCapitalLetters(string S1)', explanation: 'Iterates through the string and increments a counter for each uppercase character found.', code: `short CountCapitalLetters(string S1)\n{\n    short Counter = 0;\n    for (short i = 0; i < S1.length(); i++)\n    {\n        if (isupper(S1[i]))\n            Counter++;\n    }\n    return Counter;\n}` },
     { name: 'CountSmallLetters(string S1)', signature: 'short CountSmallLetters(string S1)', explanation: 'Iterates through the string and increments a counter for each lowercase character found.', code: `short CountSmallLetters(string S1)\n{\n    short Counter = 0;\n    for (short i = 0; i < S1.length(); i++)\n    {\n        if (islower(S1[i]))\n            Counter++;\n    }\n    return Counter;\n}` }
-  ], keyConcepts: ['String Iteration', 'Counters', 'isupper()', 'islower()', 'Conditional Logic'] },
+  ], keyConcepts: ['String Iteration', 'Counters', 'isupper()', 'islower()', 'Conditional Logic'],
+  hints: [
+    'You will need two counter variables, one for capital letters and one for small letters, both initialized to 0.',
+    'Loop through each character of the string.',
+    'Inside the loop, use `isupper()` to check for capitals and `islower()` for smalls.',
+    'Increment the appropriate counter when a match is found.'
+  ]},
   { id: 7, title: 'Problem 7 — Count a Specific Letter', description: 'Read a string and a character, then count how many times that character appears. Separate string and character with a pipe (|).', example: 'programming is fun|g', generator: genCountLetterSteps, functions: [
     { name: 'ReadString()', signature: 'string ReadString()', explanation: 'Reads a full line of text from the user.', code: `string ReadString()\n{\n    string S1;\n    cout << "\\nPlease Enter Your String?\\n";\n    getline(cin, S1);\n    return S1;\n}`},
     { name: 'ReadChar()', signature: 'char ReadChar()', explanation: 'Reads a single character from the user.', code: `char ReadChar()\n{\n    char Ch1;\n    cout << "\\nPlease Enter a Character?\\n";\n    cin >> Ch1;\n    return Ch1;\n}`},
     { name: 'CountLetter(string S1, char Letter)', signature: 'short CountLetter(string S1, char Letter)', explanation: 'Iterates through the string, compares each character with the target letter, and increments a counter on matches.', code: `short CountLetter(string S1, char Letter)\n{\n    short Counter = 0;\n    for (short i = 0; i < S1.length(); i++)\n    {\n        if (S1[i] == Letter)\n            Counter++;\n    }\n    return Counter;\n}`}
-  ], keyConcepts: ['String Iteration', 'Character Comparison', 'Counters', 'Function Parameters']},
+  ], keyConcepts: ['String Iteration', 'Character Comparison', 'Counters', 'Function Parameters'],
+  hints: [
+    'Initialize a counter variable to 0.',
+    'Loop through each character of the input string.',
+    'Inside the loop, use an `if` statement to compare the current character (`S1[i]`) with the target character (`Letter`).',
+    'If they are equal, increment the counter.'
+  ]},
   { 
     id: 8, 
     title: 'Problem 8 — Count a Specific Letter (Case Insensitive)', 
@@ -2717,7 +2758,14 @@ export const problems: Problem[] = [
         code: `short CountLetter(string S1, char Letter, bool MatchCase = true)\n{\n    short Counter = 0;\n    for (short i = 0; i < S1.length(); i++)\n    {\n        if (MatchCase)\n        {\n            if (S1[i] == Letter)\n                Counter++;\n        }\n        else\n        {\n            if (tolower(S1[i]) == tolower(Letter))\n                Counter++;\n        }\n    }\n    return Counter;\n}`
       }
     ], 
-    keyConcepts: ['String Iteration', 'Character Comparison', 'Counters', 'Case Insensitivity', 'Optional Parameters']
+    keyConcepts: ['String Iteration', 'Character Comparison', 'Counters', 'Case Insensitivity', 'Optional Parameters'],
+    hints: [
+      'The case-sensitive part is the same as the previous problem.',
+      'For the case-insensitive count, you need to standardize the case before comparing.',
+      'A good strategy is to convert both the character from the string (`S1[i]`) and the target character (`Letter`) to the same case (e.g., lowercase) before the `if` check.',
+      'Use `tolower()` on both sides of the comparison: `if (tolower(S1[i]) == tolower(Letter))`.',
+      'Consider adding an optional boolean parameter to your function to control whether the search is case-sensitive or not.'
+    ]
   },
   { 
     id: 9, 
@@ -2739,7 +2787,12 @@ export const problems: Problem[] = [
         code: `bool IsVowel(char Ch1)\n{\n    Ch1 = tolower(Ch1);\n    return ((Ch1 == 'a') || (Ch1 == 'e') || (Ch1 == 'i') || (Ch1 == 'o') || (Ch1 == 'u'));\n}`
       }
     ], 
-    keyConcepts: ['Character I/O', 'Boolean Logic', 'tolower()', 'Conditional Statements']
+    keyConcepts: ['Character I/O', 'Boolean Logic', 'tolower()', 'Conditional Statements'],
+    hints: [
+      'To handle case-insensitivity easily, first convert the input character to lowercase using `tolower()`.',
+      'After converting, you only need to check against the five lowercase vowels.',
+      'Use the logical OR operator (`||`) to check if the character matches any of the vowels: `(ch == \'a\') || (ch == \'e\') || ...`'
+    ]
   },
   {
     id: 10,
@@ -2767,7 +2820,13 @@ export const problems: Problem[] = [
         code: `short CountVowels(string S1)\n{\n    short Counter = 0;\n    for (short i = 0; i < S1.length(); i++)\n    {\n        if (IsVowel(S1[i]))\n            Counter++;\n    }\n    return Counter;\n}`
       }
     ],
-    keyConcepts: ['String Iteration', 'Helper Functions', 'Boolean Logic', 'Case Insensitivity', 'tolower()']
+    keyConcepts: ['String Iteration', 'Helper Functions', 'Boolean Logic', 'Case Insensitivity', 'tolower()'],
+    hints: [
+      'This problem combines looping with the logic from the previous problem.',
+      'It is highly recommended to use the `IsVowel` function you just designed.',
+      'Loop through every character of the string. Inside the loop, call `IsVowel` on the current character.',
+      'If `IsVowel` returns true, increment a counter.'
+    ]
   },
   {
     id: 11,
@@ -2795,7 +2854,12 @@ export const problems: Problem[] = [
         code: `void PrintVowels(string S1)\n{\n    cout << "\\nVowels in string are: ";\n    for (short i = 0; i < S1.length(); i++)\n    {\n        if (IsVowel(S1[i]))\n            cout << S1[i] << "   ";\n    }\n}`
       }
     ],
-    keyConcepts: ['String Iteration', 'Helper Functions', 'Conditional Logic', 'Character Output', 'void Functions']
+    keyConcepts: ['String Iteration', 'Helper Functions', 'Conditional Logic', 'Character Output', 'void Functions'],
+    hints: [
+      'The structure is almost identical to counting vowels.',
+      'Loop through the string and use the `IsVowel` helper function.',
+      'Instead of incrementing a counter when `IsVowel` is true, simply print the character using `cout`.'
+    ]
   },
   {
     id: 12,
@@ -2817,7 +2881,14 @@ export const problems: Problem[] = [
         code: `void PrintEachWordInString(string S1)\n{\n    string delim = " ";\n    cout << "\\nYour string words are: \\n\\n";\n    short pos = 0;\n    string sWord;\n    while ((pos = S1.find(delim)) != std::string::npos)\n    {\n        sWord = S1.substr(0, pos);\n        if (sWord != "")\n        {\n            cout << sWord << endl;\n        }\n        S1.erase(0, pos + delim.length());\n    }\n    if (S1 != "")\n    {\n        cout << S1 << endl;\n    }\n}`
       }
     ],
-    keyConcepts: ['String Manipulation', 'find()', 'substr()', 'erase()', 'While Loop']
+    keyConcepts: ['String Manipulation', 'find()', 'substr()', 'erase()', 'While Loop'],
+    hints: [
+      'Think about how to identify a "word". A word is a sequence of characters separated by a delimiter (like a space).',
+      'The `string::find` method is perfect for locating the position of the next space.',
+      'Once you have the position, `string::substr` can extract the word.',
+      'After extracting the word, you must shorten the original string using `string::erase` so you can find the *next* word in the next loop iteration.',
+      'Don\'t forget to print the very last word after the loop finishes!'
+    ]
   },
   {
     id: 13,
@@ -2839,7 +2910,14 @@ export const problems: Problem[] = [
         code: `short CountWords(string S1)\n{\n    string delim = " ";\n    short Counter = 0;\n    short pos = 0;\n    string sWord;\n    while ((pos = S1.find(delim)) != std::string::npos)\n    {\n        sWord = S1.substr(0, pos);\n        if (sWord != "")\n        {\n            Counter++;\n        }\n        S1.erase(0, pos + delim.length());\n    }\n    if (S1 != "")\n    {\n        Counter++;\n    }\n    return Counter;\n}`
       }
     ],
-    keyConcepts: ['String Manipulation', 'find()', 'substr()', 'erase()', 'While Loop', 'Counters']
+    keyConcepts: ['String Manipulation', 'find()', 'substr()', 'erase()', 'While Loop', 'Counters'],
+    hints: [
+      'This problem builds directly on the logic from the previous one (printing words).',
+      'Use the same `find`, `substr`, `erase` loop structure.',
+      'Instead of printing the extracted word, simply increment a counter.',
+      'Remember to handle consecutive spaces by checking if the extracted `sWord` is not empty before counting.',
+      'The last word in the string won\'t be followed by a delimiter, so you need to count it after the loop finishes.'
+    ]
   },
   {
     id: 14,
@@ -2861,7 +2939,13 @@ export const problems: Problem[] = [
         code: `vector<string> SplitString(string S1, string Delim)\n{\n    vector<string> vString;\n    short pos = 0;\n    string sWord;\n    while ((pos = S1.find(Delim)) != std::string::npos)\n    {\n        sWord = S1.substr(0, pos);\n        if (sWord != "")\n        {\n            vString.push_back(sWord);\n        }\n        S1.erase(0, pos + Delim.length());\n    }\n    if (S1 != "")\n    {\n        vString.push_back(S1);\n    }\n    return vString;\n}`
       }
     ],
-    keyConcepts: ['std::vector', 'vector::push_back', 'String Tokenizing', 'find()', 'substr()', 'erase()']
+    keyConcepts: ['std::vector', 'vector::push_back', 'String Tokenizing', 'find()', 'substr()', 'erase()'],
+    hints: [
+      'Again, the `find`, `substr`, `erase` loop is the core of the solution.',
+      'First, declare an empty `vector<string> vString;`',
+      'Inside the loop, when you extract a word, instead of printing or counting it, add it to the vector using `vString.push_back(sWord);`',
+      'The function should return the final populated vector.'
+    ]
   },
   {
     id: 15,
@@ -2889,7 +2973,13 @@ export const problems: Problem[] = [
             code: `string Trim(string S1)\n{\n    return (TrimLeft(TrimRight(S1)));\n}`
         }
     ],
-    keyConcepts: ['String Iteration', 'substr()', 'Function Composition', 'Whitespace Handling']
+    keyConcepts: ['String Iteration', 'substr()', 'Function Composition', 'Whitespace Handling'],
+    hints: [
+      'For `TrimLeft`, use a `for` loop that starts at index 0. The first time `S1[i]` is not a space, you\'ve found your starting point.',
+      'For `TrimRight`, use a `for` loop that starts at `S1.length() - 1` and decrements. The first time `S1[i]` is not a space, you\'ve found your ending point.',
+      'Use `string::substr` to extract the correct part of the string once you find the non-space character.',
+      'For the full `Trim`, you can simply call the other two functions: `TrimLeft(TrimRight(S1))`'
+    ]
   },
   {
     id: 16,
@@ -2905,7 +2995,13 @@ export const problems: Problem[] = [
             code: `string JoinString(vector<string> vString, string Delim)\n{\n    string S1 = "";\n    \n    for (string& s : vString)\n    {\n        S1 = S1 + s + Delim;\n    }\n    \n    return S1.substr(0, S1.length() - Delim.length());\n}`
         }
     ],
-    keyConcepts: ['std::vector', 'String Concatenation', 'Range-based for loop', 'substr()']
+    keyConcepts: ['std::vector', 'String Concatenation', 'Range-based for loop', 'substr()'],
+    hints: [
+      'Create an empty string to build the result.',
+      'Use a range-based for loop (`for (string s : vString)`) to iterate through the vector.',
+      'In each iteration, append the current string `s` and the delimiter to your result string.',
+      'This will leave an extra delimiter at the end. Use `substr` to return the string minus the last delimiter.'
+    ]
   },
   {
     id: 17,
@@ -2927,7 +3023,13 @@ export const problems: Problem[] = [
             code: `string JoinString(string arrString[], short Length, string Delim)\n{\n    string S1 = "";\n    \n    for (short i = 0; i < Length; i++)\n    {\n        S1 = S1 + arrString[i] + Delim;\n    }\n    \n    return S1.substr(0, S1.length() - Delim.length());\n}`
         }
     ],
-    keyConcepts: ['Function Overloading', 'C-style Arrays', 'std::vector', 'String Concatenation']
+    keyConcepts: ['Function Overloading', 'C-style Arrays', 'std::vector', 'String Concatenation'],
+    hints: [
+      'The core logic is the same for both functions.',
+      'For the vector version, a range-based for loop is cleanest: `for (string s : vString)`',
+      'For the C-style array version, you must pass the length as a parameter and use a traditional indexed for loop: `for (short i = 0; i < Length; i++)`',
+      'Both functions will need to remove the trailing delimiter at the end.'
+    ]
   },
   {
     id: 18,
@@ -2955,7 +3057,13 @@ export const problems: Problem[] = [
         code: `string ReverseWordsInString(string S1)\n{\n    vector<string> vString;\n    string S2 = "";\n    vString = SplitString(S1, " ");\n    \n    vector<string>::iterator iter = vString.end();\n    \n    while (iter != vString.begin())\n    {\n        --iter;\n        S2 += *iter + " ";\n    }\n    \n    S2 = S2.substr(0, S2.length() - 1); //remove last space.\n    return S2;\n}`
       }
     ],
-    keyConcepts: ['std::vector', 'vector::iterator', 'Looping Backwards', 'String Tokenizing', 'Function Composition']
+    keyConcepts: ['std::vector', 'vector::iterator', 'Looping Backwards', 'String Tokenizing', 'Function Composition'],
+    hints: [
+      'This is a multi-step problem. First, you need to get the words into a data structure.',
+      'Use the `SplitString` function from an earlier problem to get a `vector<string>` of the words.',
+      'To iterate backwards, you can use a `vector::iterator` starting at `vString.end()` and decrementing it until it reaches `vString.begin()`.',
+      'Alternatively, a simpler way is to use a normal `for` loop that counts down: `for (int i = vString.size() - 1; i >= 0; i--)`.'
+    ]
   },
   {
     id: 19,
@@ -2971,7 +3079,13 @@ export const problems: Problem[] = [
             code: `string ReplaceWordInStringUsingBuiltInFunction(string S1, string StringToReplace, string sRepalceTo)\n{\n    short pos = S1.find(StringToReplace);\n    \n    while (pos != std::string::npos)\n    {\n        S1 = S1.replace(pos, StringToReplace.length(), sRepalceTo);\n        pos = S1.find(StringToReplace); //find next\n    }\n    \n    return S1;\n}`
         }
     ],
-    keyConcepts: ['string::find', 'string::replace', 'While Loop', 'std::string::npos', 'String Manipulation']
+    keyConcepts: ['string::find', 'string::replace', 'While Loop', 'std::string::npos', 'String Manipulation'],
+    hints: [
+      'You need to find the position of the word to replace. `string::find` is perfect for this.',
+      'Since you need to replace *all* occurrences, a `while` loop is necessary. The loop should continue as long as `find` does not return `std::string::npos`.',
+      'Inside the loop, use `string::replace(position, length, new_word)` to perform the replacement.',
+      'Crucially, after replacing, you must call `find` again to search for the *next* occurrence.'
+    ]
   },
   {
     id: 20,
@@ -2987,7 +3101,13 @@ export const problems: Problem[] = [
             code: `string RemovePunctuationsFromString(string S1)\n{\n    string S2 = "";\n    \n    for (short i = 0; i < S1.length(); i++)\n    {\n        if (!ispunct(S1[i]))\n        {\n            S2 += S1[i];\n        }\n    }\n    \n    return S2;\n}`
         }
     ],
-    keyConcepts: ['String Iteration', 'ispunct()', 'String Concatenation', 'cctype library', 'Building Strings']
+    keyConcepts: ['String Iteration', 'ispunct()', 'String Concatenation', 'cctype library', 'Building Strings'],
+    hints: [
+      'Create a new, empty string that will hold the result.',
+      'Loop through the original string character by character.',
+      'The `<cctype>` library has a very useful function: `ispunct(char)`. It returns true if the character is punctuation.',
+      'Inside the loop, if `!ispunct(S1[i])` is true, append that character to your new result string.'
+    ]
   },
   {
     id: 21,
@@ -3003,7 +3123,13 @@ export const problems: Problem[] = [
             code: `struct sClient\n{\n    string AccountNumber;\n    string PinCode;\n    string Name;\n    string Phone;\n    double AccountBalance;\n};\n\nstring ConvertRecordToLine(sClient Client, string Seperator = "#//#")\n{\n    string stClientRecord = "";\n    stClientRecord += Client.AccountNumber + Seperator;\n    stClientRecord += Client.PinCode + Seperator;\n    stClientRecord += Client.Name + Seperator;\n    stClientRecord += Client.Phone + Seperator;\n    stClientRecord += to_string(Client.AccountBalance);\n    return stClientRecord;\n}`
         }
     ],
-    keyConcepts: ['struct', 'Data Serialization', 'String Concatenation', 'to_string()', 'Delimiters']
+    keyConcepts: ['struct', 'Data Serialization', 'String Concatenation', 'to_string()', 'Delimiters'],
+    hints: [
+      'Start with an empty string, e.g., `stClientRecord`.',
+      'Append each field from the struct one by one, followed by the separator string.',
+      'The `AccountBalance` is a double, so it must be converted to a string using `to_string()` before it can be concatenated.',
+      'Do not add a separator after the last field.'
+    ]
   },
   {
     id: 22,
@@ -3031,7 +3157,14 @@ export const problems: Problem[] = [
         code: `void PrintClientRecord(sClient Client)\n{\n    cout << "\\n\\nThe following is the extracted client record:\\n";\n    cout << "\\nAccout Number: " << Client.AccountNumber;\n    cout << "\\nPin Code      : " << Client.PinCode;\n    cout << "\\nName          : " << Client.Name;\n    cout << "\\nPhone         : " << Client.Phone;\n    cout << "\\nAccount Balance: " << Client.AccountBalance;\n}`
       }
     ],
-    keyConcepts: ['Data Deserialization', 'String Parsing', 'std::vector', 'stod()', 'struct']
+    keyConcepts: ['Data Deserialization', 'String Parsing', 'std::vector', 'stod()', 'struct'],
+    hints: [
+      'This is the reverse of the previous problem. First, you need to break the line into pieces.',
+      'Use the `SplitString` function (from P14) to get a `vector<string>` of the client data fields.',
+      'Create a new, empty `sClient` struct.',
+      'Assign each element from the vector to its corresponding field in the struct (e.g., `Client.AccountNumber = vClientData[0];`).',
+      'The account balance is a string in the vector. Use `stod()` (string to double) to convert it before assigning it to the struct field.'
+    ]
   },
   {
     id: 23,
@@ -3065,7 +3198,13 @@ export const problems: Problem[] = [
         code: `void AddClients()\n{\n    char AddMore = 'Y';\n    do\n    {\n        cout << "Adding New Client:\\n\\n";\n        AddNewClient();\n        cout << "\\nClient Added Successfully, do you want to add more clients? Y/N? ";\n        cin >> AddMore;\n    } while (toupper(AddMore) == 'Y');\n}`
       }
     ],
-    keyConcepts: ['File I/O', 'fstream', 'ios::app', 'do-while loop', 'Function Composition', 'User Input Simulation']
+    keyConcepts: ['File I/O', 'fstream', 'ios::app', 'do-while loop', 'Function Composition', 'User Input Simulation'],
+    hints: [
+      'The logic should revolve around a `do-while` loop that continues as long as the user enters \'Y\'.',
+      'Inside the loop: 1. Read a new client record into a struct. 2. Convert that struct into a delimited line. 3. Append that line to the file.',
+      'To add to a file without erasing its contents, open the `fstream` with the `ios::app` (append) flag.',
+      'Always remember to close your file stream when you are done with it.'
+    ]
   },
   {
     id: 24,
@@ -3099,7 +3238,13 @@ export const problems: Problem[] = [
         code: `void PrintClientRecord(sClient Client)\n{\n    cout << "| " << setw(15) << left << Client.AccountNumber;\n    cout << "| " << setw(10) << left << Client.PinCode;\n    cout << "| " << setw(40) << left << Client.Name;\n    cout << "| " << setw(12) << left << Client.Phone;\n    cout << "| " << setw(12) << left << Client.AccountBalance;\n}\n\nvoid PrintAllClientsData(vector<sClient> vClients)\n{\n    cout << "\\n\\t\\t\\t\\t\\tClient List (" << vClients.size() << ") Client(s).";\n    cout << "\\n\\n_______________________________________________________";\n    cout << "_________________________________________\\n" << endl;\n    \n    cout << "| " << left << setw(15) << "Accout Number";\n    cout << "| " << left << setw(10) << "Pin Code";\n    cout << "| " << left << setw(40) << "Client Name";\n    cout << "| " << left << setw(12) << "Phone";\n    cout << "| " << left << setw(12) << "Balance";\n    cout << "\\n_______________________________________________________";\n    cout << "_________________________________________\\n" << endl;\n    \n    for (sClient Client : vClients)\n    {\n        PrintClientRecord(Client);\n        cout << endl;\n    }\n    \n    cout << "\\n_______________________________________________________";\n    cout << "_________________________________________\\n" << endl;\n}`
       },
     ],
-    keyConcepts: ['File Reading', 'fstream', 'getline()', 'std::vector<struct>', 'Formatted Output', 'setw()', 'iomanip']
+    keyConcepts: ['File Reading', 'fstream', 'getline()', 'std::vector<struct>', 'Formatted Output', 'setw()', 'iomanip'],
+    hints: [
+      'To read a file line by line, the `while (getline(MyFile, Line))` loop is the standard approach.',
+      'Inside the loop, you will process one `Line` at a time.',
+      'For each line, use the `ConvertLinetoRecord` function from P22 to parse it into a `sClient` struct.',
+      'Add the newly created struct to your vector using `vClients.push_back(Client);`.'
+    ]
   },
   {
     id: 25,
@@ -3133,7 +3278,13 @@ export const problems: Problem[] = [
         code: `string ReadClientAccountNumber()\n{\n    string AccountNumber = "";\n    cout << "\\nPlease enter AccountNumber? ";\n    cin >> AccountNumber;\n    return AccountNumber;\n}`
       }
     ],
-    keyConcepts: ['Linear Search', 'Pass by Reference', 'Vector Iteration', 'Boolean Return Value', 'Conditional Logic']
+    keyConcepts: ['Linear Search', 'Pass by Reference', 'Vector Iteration', 'Boolean Return Value', 'Conditional Logic'],
+    hints: [
+      'First, load all clients from the file into a vector using the function from P24.',
+      'Iterate through the vector of clients using a range-based for loop.',
+      'Inside the loop, compare the `AccountNumber` of the current client (`C.AccountNumber`) with the account number you are searching for.',
+      'If you find a match, you should return `true` immediately. If the loop finishes without a match, return `false`.'
+    ]
   },
   {
     id: 26,
@@ -3173,7 +3324,13 @@ export const problems: Problem[] = [
         code: `bool DeleteClientByAccountNumber(string AccountNumber, vector<sClient>& vClients)\n{\n    sClient Client;\n    char Answer = 'n';\n    if (FindClientByAccountNumber(AccountNumber, vClients, Client))\n    {\n        PrintClientCard(Client);\n        cout << "\\n\\nAre you sure you want delete this client? y/n ? ";\n        cin >> Answer;\n        if (Answer == 'y' || Answer == 'Y')\n        {\n            MarkClientForDeleteByAccountNumber(AccountNumber, vClients);\n            SaveCleintsDataToFile(ClientsFileName, vClients);\n            //Refresh Clients\n            vClients = LoadCleintsDataFromFile(ClientsFileName);\n            cout << "\\n\\nClient Deleted Successfully.";\n            return true;\n        }\n    }\n    else\n    {\n        cout << "\\nClient with Account Number (" << AccountNumber << ") is Not Found!";\n        return false;\n    }\n}`
       }
     ],
-    keyConcepts: ['Soft Delete', 'File Overwriting (ios::out)', 'Vector Pass-by-Reference', 'Data Persistence', 'State Management']
+    keyConcepts: ['Soft Delete', 'File Overwriting (ios::out)', 'Vector Pass-by-Reference', 'Data Persistence', 'State Management'],
+    hints: [
+      'A safe way to delete is to first load all data into a vector.',
+      'Then, find the client to delete in the vector and mark it (e.g., with a boolean `MarkForDelete = true`). This is called a "soft delete".',
+      'Next, open the original file in *write* mode (`ios::out`), which erases its contents.',
+      'Finally, loop through your vector and write back only the clients that are *not* marked for deletion.'
+    ]
   },
   {
     id: 27,
@@ -3201,6 +3358,12 @@ export const problems: Problem[] = [
             code: `struct sClient\n{\n    string AccountNumber;\n    string PinCode;\n    string Name;\n    string Phone;\n    double AccountBalance;\n    bool MarkForDelete = false;\n};\n\nbool UpdateClientByAccountNumber(string AccountNumber, vector<sClient>& vClients)\n{\n    sClient Client;\n    char Answer = 'n';\n    if (FindClientByAccountNumber(AccountNumber, vClients, Client))\n    {\n        PrintClientCard(Client);\n        cout << "\\n\\nAre you sure you want update this client? y/n ? ";\n        cin >> Answer;\n        if (Answer == 'y' || Answer == 'Y')\n        {\n            for (sClient& C : vClients)\n            {\n                if (C.AccountNumber == AccountNumber)\n                {\n                    C = ChangeClientRecord(AccountNumber);\n                    break;\n                }\n            }\n            SaveCleintsDataToFile(ClientsFileName, vClients);\n            cout << "\\n\\nClient Updated Successfully.";\n            return true;\n        }\n    }\n    else\n    {\n        cout << "\\nClient with Account Number (" << AccountNumber << ") is Not Found!";\n        return false;\n    }\n}`
         }
     ],
-    keyConcepts: ['Data Update', 'In-place Modification', 'File Overwriting', 'Vector Pass-by-Reference', 'CRUD Operations']
+    keyConcepts: ['Data Update', 'In-place Modification', 'File Overwriting', 'Vector Pass-by-Reference', 'CRUD Operations'],
+    hints: [
+      'The process is very similar to deleting: load data into a vector first.',
+      'Find the client you want to update within the vector.',
+      'Once found, prompt the user for the new information and update the fields of that specific client struct *in the vector*.',
+      'Finally, save the entire modified vector back to the file, overwriting the old contents.'
+    ]
   }
 ];
