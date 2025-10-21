@@ -773,6 +773,116 @@ function genCountWordsSteps(str: string): Step[] {
   return steps;
 }
 
+function genSplitStringSteps(str: string): Step[] {
+  const steps: Step[] = [];
+  let s1 = str;
+  let vString: string[] = [];
+  const delim = " ";
+  let stepCounter = 0;
+
+  steps.push({
+    i: stepCounter++,
+    code: `vector<string> vString;`,
+    explanation: 'Initialize an empty vector to store the words.',
+    input: str,
+    modified: s1,
+    mem: [`vString=[]`]
+  });
+
+  while (true) {
+    const pos = s1.indexOf(delim);
+
+    steps.push({
+      i: stepCounter++,
+      code: `pos = S1.find("${delim}")`,
+      explanation: `Search for delimiter " ". Found at index: ${pos}. (npos is -1)`,
+      input: str,
+      modified: s1,
+      mem: [`pos = ${pos}`, `vString=[${vString.join(',')}]`]
+    });
+    
+    steps.push({
+      i: stepCounter++,
+      code: `while (pos != std::string::npos)`,
+      explanation: `Check loop condition: ${pos} != -1. Condition is ${pos !== -1 ? 'true, enter loop' : 'false, exit loop'}.`,
+      input: str,
+      modified: s1,
+      mem: [`Continue loop? ${pos !== -1}`, `vString=[${vString.join(',')}]`]
+    });
+    
+    if (pos === -1) {
+      break; 
+    }
+
+    const sWord = s1.substring(0, pos);
+    steps.push({
+      i: stepCounter++,
+      code: `sWord = S1.substr(0, ${pos});`,
+      explanation: `Extract word from index 0 up to delimiter. Word is "${sWord}".`,
+      input: str,
+      modified: s1,
+      mem: [`sWord = "${sWord}"`, `vString=[${vString.join(',')}]`]
+    });
+
+    if (sWord !== "") {
+        vString.push(sWord);
+        steps.push({
+          i: stepCounter++,
+          code: `vString.push_back(sWord);`,
+          explanation: `Word "${sWord}" is not empty. Adding it to the vector.`,
+          input: str,
+          modified: s1,
+          mem: [`vString=[${vString.join(',')}]`]
+        });
+    }
+
+    const s1BeforeErase = s1;
+    s1 = s1.substring(pos + delim.length);
+    steps.push({
+      i: stepCounter++,
+      code: `S1.erase(0, ${pos} + ${delim.length});`,
+      explanation: `Erase processed part from S1. The string is now shorter.`,
+      input: str,
+      modified: s1,
+      mem: [`S1 was: "${s1BeforeErase}"`, `S1 is now: "${s1}"`, `vString=[${vString.join(',')}]`]
+    });
+  }
+
+  // After loop
+  if (s1 !== "") {
+    vString.push(s1);
+    steps.push({
+      i: stepCounter++,
+      code: `vString.push_back(S1);`,
+      explanation: `Loop finished. Add the last remaining word "${s1}" to the vector.`,
+      input: str,
+      modified: s1,
+      mem: [`vString=[${vString.join(',')}]`]
+    });
+  } else {
+    steps.push({
+      i: stepCounter++,
+      code: `// After loop`,
+      explanation: `Loop finished. No remaining characters to add.`,
+      input: str,
+      modified: s1,
+      mem: [`S1 is empty.`, `vString=[${vString.join(',')}]`]
+    });
+  }
+
+  steps.push({
+    i: stepCounter++,
+    code: 'return vString;',
+    explanation: `Function finished. The vector now contains ${vString.length} words and is returned.`,
+    input: str,
+    modified: s1,
+    output: vString,
+    mem: [`vString=[${vString.join(',')}]`, `size=${vString.length}`]
+  });
+
+  return steps;
+}
+
 export const problems: Problem[] = [
   { id: 1, title: 'Problem 1 — Print First Letter of Each Word', description: 'Read a string and print the first letter of every word.', example: 'programming is fun', generator: genPrintFirstLettersSteps, functions: [
     {name: 'ReadString()', signature: 'string ReadString()', explanation: 'Reads a full line including spaces.', code: `string ReadString()\n{\n    string S1;\n    getline(cin, S1);\n    return S1;\n}`},
@@ -958,5 +1068,27 @@ export const problems: Problem[] = [
       }
     ],
     keyConcepts: ['String Manipulation', 'find()', 'substr()', 'erase()', 'While Loop', 'Counters']
+  },
+  {
+    id: 14,
+    title: 'Problem 14 — Split String into a Vector',
+    description: 'Read a string, split it into words by a delimiter, and store those words in a vector.',
+    example: 'C++ is a powerful language',
+    generator: genSplitStringSteps,
+    functions: [
+      {
+        name: 'ReadString()',
+        signature: 'string ReadString()',
+        explanation: 'Reads a full line of text from the user.',
+        code: `string ReadString()\n{\n    string S1;\n    cout << "Please Enter Your String?\\n";\n    getline(cin, S1);\n    return S1;\n}`
+      },
+      {
+        name: 'SplitString(string S1, string Delim)',
+        signature: 'vector<string> SplitString(string S1, string Delim)',
+        explanation: 'Uses a while loop with find, substr, and erase to tokenize the string and stores each word in a vector.',
+        code: `vector<string> SplitString(string S1, string Delim)\n{\n    vector<string> vString;\n    short pos = 0;\n    string sWord;\n    while ((pos = S1.find(Delim)) != std::string::npos)\n    {\n        sWord = S1.substr(0, pos);\n        if (sWord != "")\n        {\n            vString.push_back(sWord);\n        }\n        S1.erase(0, pos + Delim.length());\n    }\n    if (S1 != "")\n    {\n        vString.push_back(S1);\n    }\n    return vString;\n}`
+      }
+    ],
+    keyConcepts: ['std::vector', 'vector::push_back', 'String Tokenizing', 'find()', 'substr()', 'erase()']
   }
 ];

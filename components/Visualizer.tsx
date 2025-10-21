@@ -41,6 +41,9 @@ const Visualizer: React.FC<VisualizerProps> = ({ problem }) => {
     if (problem.functions.some(f => f.signature.includes('string'))) {
       headers.add('string');
     }
+    if (problem.functions.some(f => f.signature.includes('vector'))) {
+      headers.add('vector');
+    }
 
     const headerIncludes = Array.from(headers).map(h => `#include <${h}>`).join('\n');
     const functionDefinitions = problem.functions.map(f => f.code).join('\n\n');
@@ -145,6 +148,19 @@ const Visualizer: React.FC<VisualizerProps> = ({ problem }) => {
     cout << "\\nThe number of words in your string is: " << CountWords(S1) << endl;
             `;
             break;
+        case 14:
+            mainBody = `
+    vector<string> vString;
+    vString = SplitString(${readStringFn ? readStringFn.name + "()" : "/* Read string logic here */"}, " ");
+    
+    cout << "\\nTokens = " << vString.size() << endl;
+    
+    for (string& s : vString)
+    {
+        cout << s << endl;
+    }
+            `;
+            break;
         default:
             mainBody = `    // TODO: Implement main execution logic for this problem.`;
     }
@@ -219,6 +235,7 @@ ${mainBody}
   const isCaseInsensitiveCounterProblem = problem.id === 8;
   const isVowelCounterProblem = problem.id === 10;
   const isWordCounterProblem = problem.id === 13;
+  const isVectorProblem = problem.id === 14;
 
   return (
     <div className="card">
@@ -271,7 +288,7 @@ ${mainBody}
                   </div>
                 ) : (
                   <div className="p-3 border rounded bg-white flex items-center justify-center min-h-[96px]">
-                    <div className="text-2xl font-bold mono p-4">{[12, 13].includes(problem.id) ? input : (charList[0] || '')}</div>
+                    <div className="text-2xl font-bold mono p-4">{[12, 13, 14].includes(problem.id) ? input : (charList[0] || '')}</div>
                   </div>
                 )}
             </div>
@@ -451,6 +468,32 @@ ${mainBody}
                                   <div className="text-xs text-gray-500">Words Found</div>
                                   <div className="p-2 bg-fuchsia-100 rounded mt-1 font-bold text-lg">{count}</div>
                               </div>
+                          </div>
+                      </div>
+                  )
+              })()}
+
+              {isVectorProblem && (() => {
+                  let vectorItems: string[] = [];
+                  if (current.mem) {
+                      const memString = current.mem.join('|');
+                      const vecMatch = memString.match(/vString=\[(.*?)\]/);
+                      if (vecMatch && vecMatch[1]) {
+                          vectorItems = vecMatch[1].split(',').filter(Boolean);
+                      } else if (vecMatch) {
+                          vectorItems = [];
+                      }
+                  }
+                  return (
+                      <div className="card">
+                          <div className="text-sm font-semibold mb-2">Live Vector</div>
+                          <div className="paper text-sm space-y-1 p-2" style={{minHeight: 100, maxHeight: 200, overflowY: 'auto'}}>
+                              {vectorItems.length > 0 ? vectorItems.map((item, index) => (
+                                  <div key={index} className="flex items-center gap-2">
+                                      <span className="text-xs text-gray-500 w-4">{index}:</span>
+                                      <span className="p-1 bg-sky-100 rounded text-xs mono w-full">"{item}"</span>
+                                  </div>
+                              )) : <div className="text-gray-500 italic text-xs">Vector is empty.</div>}
                           </div>
                       </div>
                   )
