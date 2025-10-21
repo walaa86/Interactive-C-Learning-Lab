@@ -1570,6 +1570,128 @@ function genStructToLineSteps(separator: string): Step[] {
   return steps;
 }
 
+function genLineToStructSteps(line: string): Step[] {
+    const steps: Step[] = [];
+    const separator = "#//#";
+    let s1 = line;
+    let vString: string[] = [];
+    let stepCounter = 0;
+
+    // --- Phase 1: Split String into Vector ---
+    steps.push({
+        i: stepCounter++,
+        phase: 'split',
+        code: `vClientData = SplitString(Line, "${separator}");`,
+        explanation: 'Start by splitting the input line into tokens using the SplitString function.',
+        input: line,
+        modified: s1,
+        mem: [`vString=[]`]
+    });
+
+    while (s1.includes(separator)) {
+        const pos = s1.indexOf(separator);
+        const sWord = s1.substring(0, pos);
+        if (sWord) vString.push(sWord);
+        steps.push({
+            i: stepCounter++,
+            phase: 'split',
+            code: `// Inside SplitString loop...`,
+            explanation: `Found token "${sWord}" and added it to the vector.`,
+            input: line,
+            modified: s1.substring(pos + separator.length),
+            mem: [`vString=[${vString.join(',')}]`]
+        });
+        s1 = s1.substring(pos + separator.length);
+    }
+    if (s1) vString.push(s1);
+
+    steps.push({
+        i: stepCounter++,
+        phase: 'split',
+        code: `// Splitting complete`,
+        explanation: `The line has been split into ${vString.length} tokens.`,
+        input: line,
+        modified: '',
+        mem: [`vString=[${vString.join(',')}]`]
+    });
+
+    // --- Phase 2: Assign Vector elements to Struct fields ---
+    const Client: any = { AccountNumber: "", PinCode: "", Name: "", Phone: "", AccountBalance: 0.0 };
+    const fields: ('AccountNumber' | 'PinCode' | 'Name' | 'Phone' | 'AccountBalance')[] = ['AccountNumber', 'PinCode', 'Name', 'Phone', 'AccountBalance'];
+    
+    steps.push({
+        i: stepCounter++,
+        phase: 'assign',
+        code: `sClient Client;`,
+        explanation: 'An empty sClient struct is created in memory.',
+        input: line,
+        modified: '',
+        mem: [`Client struct is empty`, `vString=[${vString.join(',')}]`]
+    });
+
+    for (let i = 0; i < fields.length; i++) {
+        const fieldName = fields[i];
+        const value = vString[i] || "";
+        let explanation;
+        if (fieldName === 'AccountBalance') {
+            Client[fieldName] = parseFloat(value) || 0.0;
+            explanation = `Convert string "${value}" to double using stod() and assign to Client.${fieldName}.`;
+        } else {
+            Client[fieldName] = value;
+            explanation = `Assign vector element ${i} ("${value}") to Client.${fieldName}.`;
+        }
+        steps.push({
+            i: i,
+            phase: 'assign',
+            field: fieldName,
+            code: `Client.${fieldName} = vClientData[${i}];${fieldName === 'AccountBalance' ? ' // using stod()' : ''}`,
+            explanation: explanation,
+            input: line,
+            modified: value,
+            mem: [`Client.${fieldName} = ${Client[fieldName]}`, `vString=[${vString.join(',')}]`]
+        });
+    }
+
+    // --- Phase 3: Print the Record ---
+    const finalOutput: string[] = [];
+    steps.push({
+        i: -1,
+        phase: 'print',
+        code: `PrintClientRecord(Client);`,
+        explanation: `Now, print the data from the populated struct.`,
+        input: line,
+        modified: '',
+        output: [],
+        mem: [`Client is fully populated.`]
+    });
+    
+    finalOutput.push(`Accout Number: ${Client.AccountNumber}`);
+    steps.push({ i: -1, phase: 'print', field: 'AccountNumber', code: `cout << Client.AccountNumber;`, explanation: `Printing AccountNumber.`, input: line, output: [...finalOutput], mem: [] });
+    
+    finalOutput.push(`Pin Code: ${Client.PinCode}`);
+    steps.push({ i: -1, phase: 'print', field: 'PinCode', code: `cout << Client.PinCode;`, explanation: `Printing PinCode.`, input: line, output: [...finalOutput], mem: [] });
+    
+    finalOutput.push(`Name: ${Client.Name}`);
+    steps.push({ i: -1, phase: 'print', field: 'Name', code: `cout << Client.Name;`, explanation: `Printing Name.`, input: line, output: [...finalOutput], mem: [] });
+
+    finalOutput.push(`Phone: ${Client.Phone}`);
+    steps.push({ i: -1, phase: 'print', field: 'Phone', code: `cout << Client.Phone;`, explanation: `Printing Phone.`, input: line, output: [...finalOutput], mem: [] });
+
+    finalOutput.push(`Account Balance: ${Client.AccountBalance}`);
+    steps.push({ i: -1, phase: 'print', field: 'AccountBalance', code: `cout << Client.AccountBalance;`, explanation: `Printing AccountBalance.`, input: line, output: [...finalOutput], mem: [] });
+
+    steps.push({
+        i: -1,
+        code: 'return 0;',
+        explanation: 'Program finished.',
+        input: line,
+        output: [...finalOutput],
+        mem: ['Done']
+      });
+
+    return steps;
+}
+
 
 export const problems: Problem[] = [
   { id: 1, title: 'Problem 1 — Print First Letter of Each Word', description: 'Read a string and print the first letter of every word.', example: 'programming is fun', generator: genPrintFirstLettersSteps, functions: [
@@ -1920,5 +2042,33 @@ export const problems: Problem[] = [
         }
     ],
     keyConcepts: ['struct', 'Data Serialization', 'String Concatenation', 'to_string()', 'Delimiters']
+  },
+  {
+    id: 22,
+    title: 'Problem 22 — Convert Line to Struct Record',
+    description: 'Visualize the process of parsing a delimited string and populating a C++ struct with the data.',
+    example: 'A150#//#1234#//#Mohammed Abu-Hadhoud#//#079999#//#5270.00',
+    generator: genLineToStructSteps,
+    functions: [
+      {
+        name: 'SplitString',
+        signature: 'vector<string> SplitString(string S1, string Delim)',
+        explanation: 'A helper function that tokenizes a string by a delimiter and returns a vector of the tokens.',
+        code: `vector<string> SplitString(string S1, string Delim)\n{\n    vector<string> vString;\n    short pos = 0;\n    string sWord;\n    while ((pos = S1.find(Delim)) != std::string::npos)\n    {\n        sWord = S1.substr(0, pos);\n        if (sWord != "")\n        {\n            vString.push_back(sWord);\n        }\n        S1.erase(0, pos + Delim.length());\n    }\n    if (S1 != "")\n    {\n        vString.push_back(S1);\n    }\n    return vString;\n}`
+      },
+      {
+        name: 'ConvertLinetoRecord',
+        signature: 'sClient ConvertLinetoRecord(string Line, string Seperator)',
+        explanation: 'Uses SplitString to get a vector of data, then assigns each vector element to the corresponding field in an sClient struct. It uses `stod` to convert the balance.',
+        code: `struct sClient\n{\n    string AccountNumber;\n    string PinCode;\n    string Name;\n    string Phone;\n    double AccountBalance;\n};\n\nsClient ConvertLinetoRecord(string Line, string Seperator = "#//#")\n{\n    sClient Client;\n    vector<string> vClientData;\n    vClientData = SplitString(Line, Seperator);\n    \n    Client.AccountNumber = vClientData[0];\n    Client.PinCode = vClientData[1];\n    Client.Name = vClientData[2];\n    Client.Phone = vClientData[3];\n    Client.AccountBalance = stod(vClientData[4]);\n    \n    return Client;\n}`
+      },
+      {
+        name: 'PrintClientRecord',
+        signature: 'void PrintClientRecord(sClient Client)',
+        explanation: 'A utility function to print the contents of an sClient struct in a readable format.',
+        code: `void PrintClientRecord(sClient Client)\n{\n    cout << "\\n\\nThe following is the extracted client record:\\n";\n    cout << "\\nAccout Number: " << Client.AccountNumber;\n    cout << "\\nPin Code      : " << Client.PinCode;\n    cout << "\\nName          : " << Client.Name;\n    cout << "\\nPhone         : " << Client.Phone;\n    cout << "\\nAccount Balance: " << Client.AccountBalance;\n}`
+      }
+    ],
+    keyConcepts: ['Data Deserialization', 'String Parsing', 'std::vector', 'stod()', 'struct']
   }
 ];

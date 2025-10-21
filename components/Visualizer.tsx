@@ -233,6 +233,19 @@ const Visualizer: React.FC<VisualizerProps> = ({ problem }) => {
     cout << ConvertRecordToLine(Client, "${input}") << endl;
             `;
             break;
+        case 22:
+            mainBody = `
+    string stLine = "${input}";
+    
+    cout << "\\nLine Record is:\\n";
+    cout << stLine;
+    
+    sClient Client = ConvertLinetoRecord(stLine);
+    
+    PrintClientRecord(Client);
+    cout << endl;
+            `;
+            break;
         default:
             mainBody = `    // TODO: Implement main execution logic for this problem.`;
     }
@@ -314,6 +327,8 @@ ${mainBody}
   const isReverseWordsProblem = problem.id === 18;
   const isReplaceWordProblem = problem.id === 19;
   const isStructToLineProblem = problem.id === 21;
+  const isLineToStructProblem = problem.id === 22;
+
 
   const fixedClientData = {
     AccountNumber: "A1234",
@@ -426,7 +441,7 @@ ${mainBody}
                     </div>
                 ) : (
                   <div className="p-3 border rounded bg-white flex items-center justify-center min-h-[96px]">
-                    <div className="text-2xl font-bold mono p-4">{[12, 13, 14, 15, 18, 19, 20].includes(problem.id) ? (problem.id === 19 ? input.split('|')[0] : input) : (charList[0] || '')}</div>
+                    <div className="text-2xl font-bold mono p-4">{[12, 13, 14, 15, 18, 19, 20, 22].includes(problem.id) ? (problem.id === 19 ? input.split('|')[0] : input) : (charList[0] || '')}</div>
                   </div>
                 )}
             </div>
@@ -442,11 +457,11 @@ ${mainBody}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <div className="text-xs text-gray-500 mb-1">Modified</div>
-                  <div className="p-3 bg-slate-100 rounded mono min-h-[44px] break-all">{current.modified ?? (isStructToLineProblem ? '' : input)}</div>
+                  <div className="p-3 bg-slate-100 rounded mono min-h-[44px] break-all">{current.modified ?? ((isStructToLineProblem || isLineToStructProblem) ? '' : input)}</div>
                 </div>
                 <div>
                   <div className="text-xs text-gray-500 mb-1">Output / Collected</div>
-                  <div className="p-3 bg-slate-100 rounded mono min-h-[44px]">{current.output ? (current.output.length ? current.output.join(', ') : '<empty>') : '<none>'}</div>
+                  <div className="p-3 bg-slate-100 rounded mono min-h-[44px]">{current.output ? (current.output.length ? current.output.join('\n') : '<empty>') : '<none>'}</div>
                 </div>
               </div>
             </div>
@@ -464,7 +479,7 @@ ${mainBody}
                 <div className="p-4 bg-sky-100 rounded text-center mono font-bold text-xl">{current.i === undefined || current.i < 0 ? 'START' : current.i}</div>
               </div>
 
-              {(isTrimProblem || isJoinOverloadProblem || isReverseWordsProblem) && (() => {
+              {(isTrimProblem || isJoinOverloadProblem || isReverseWordsProblem || isLineToStructProblem) && (() => {
                   const phaseMap: {[key: string]: string} = {
                       left: 'Trim Left',
                       right: 'Trim Right',
@@ -472,32 +487,50 @@ ${mainBody}
                       vector: 'Vector Join',
                       array: 'Array Join',
                       split: 'Splitting String',
-                      reverse: 'Reversing Words'
+                      reverse: 'Reversing Words',
+                      assign: 'Assigning to Struct',
+                      print: 'Printing Record',
                   };
-                  const currentPhase = current.phase || (isTrimProblem ? 'left' : (isJoinOverloadProblem ? 'vector' : 'split'));
+                  const currentPhase = current.phase || (isTrimProblem ? 'left' : (isJoinOverloadProblem ? 'vector' : (isReverseWordsProblem || isLineToStructProblem ? 'split' : '')));
                   return (
                       <div className="card">
                           <div className="text-sm font-semibold mb-2">Current Operation</div>
                           <div className="p-3 bg-indigo-100 rounded text-center font-bold text-lg">
-                              {phaseMap[currentPhase]}
+                              {phaseMap[currentPhase] || 'N/A'}
                           </div>
                       </div>
                   );
               })()}
               
-              {isStructToLineProblem && (
-                  <div className="card">
-                      <div className="text-sm font-semibold mb-2">Live sClient Data</div>
-                      <div className="paper text-sm space-y-1 p-2">
-                          {Object.entries(fixedClientData).map(([key, value]) => (
-                              <div key={key} className={`flex items-center gap-2 p-1 rounded transition-colors ${current.field === key ? 'bg-yellow-300' : ''}`}>
-                                  <span className="text-xs text-gray-600 font-semibold w-2/5">{key}:</span>
-                                  <span className="p-1 bg-sky-100 rounded text-xs mono w-full break-all">"{value.toString()}"</span>
-                              </div>
-                          ))}
+              {(isStructToLineProblem || isLineToStructProblem) && (() => {
+                  const clientData: {[key:string]: string | number} = isStructToLineProblem ? fixedClientData : { AccountNumber: "", PinCode: "", Name: "", Phone: "", AccountBalance: 0.0 };
+                  
+                  if (isLineToStructProblem) {
+                      const relevantSteps = steps.slice(0, pos + 1).filter(s => s.phase === 'assign');
+                      for(const step of relevantSteps) {
+                          const match = step.mem.join('|').match(/Client\.(\w+)\s*=\s*(.*)/);
+                          if(match) {
+                            const key = match[1];
+                            const value = match[2];
+                            clientData[key] = isNaN(Number(value)) ? value : Number(value);
+                          }
+                      }
+                  }
+
+                  return (
+                      <div className="card">
+                          <div className="text-sm font-semibold mb-2">Live sClient Data</div>
+                          <div className="paper text-sm space-y-1 p-2">
+                              {Object.entries(clientData).map(([key, value]) => (
+                                  <div key={key} className={`flex items-center gap-2 p-1 rounded transition-colors ${current.field === key ? 'bg-yellow-300' : ''}`}>
+                                      <span className="text-xs text-gray-600 font-semibold w-2/5">{key}:</span>
+                                      <span className="p-1 bg-sky-100 rounded text-xs mono w-full break-all">"{value.toString()}"</span>
+                                  </div>
+                              ))}
+                          </div>
                       </div>
-                  </div>
-              )}
+                  );
+              })()}
 
               {isFirstLetterFlag && (
                 <div className="card">
@@ -677,7 +710,7 @@ ${mainBody}
                   )
               })()}
 
-              {(isVectorProblem || isReverseWordsProblem) && (() => {
+              {(isVectorProblem || isReverseWordsProblem || isLineToStructProblem) && (() => {
                   let vectorItems: string[] = [];
                   if (current.mem) {
                       const memString = current.mem.join('|');
@@ -693,7 +726,7 @@ ${mainBody}
                           <div className="text-sm font-semibold mb-2">Live Vector</div>
                           <div className="paper text-sm space-y-1 p-2" style={{minHeight: 100, maxHeight: 200, overflowY: 'auto'}}>
                               {vectorItems.length > 0 ? vectorItems.map((item, index) => (
-                                  <div key={index} className={`flex items-center gap-2 p-1 rounded transition-colors ${isReverseWordsProblem && current.phase === 'reverse' && current.i === index ? 'bg-yellow-300' : ''}`}>
+                                  <div key={index} className={`flex items-center gap-2 p-1 rounded transition-colors ${((isReverseWordsProblem && current.phase === 'reverse') || (isLineToStructProblem && current.phase === 'assign')) && current.i === index ? 'bg-yellow-300' : ''}`}>
                                       <span className="text-xs text-gray-500 w-4">{index}:</span>
                                       <span className="p-1 bg-sky-100 rounded text-xs mono w-full">"{item}"</span>
                                   </div>
