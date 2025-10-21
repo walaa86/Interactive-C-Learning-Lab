@@ -1,4 +1,3 @@
-
 import type { Problem, Step } from '../types';
 
 function genPrintFirstLettersSteps(str: string): Step[] {
@@ -151,6 +150,61 @@ function genInvertCaseSteps(str: string): Step[] {
   return steps;
 }
 
+function genCountCaseSteps(str: string): Step[] {
+  const steps: Step[] = [];
+  let capitalCount = 0;
+  let smallCount = 0;
+
+  steps.push({
+    i: -1,
+    code: 'short capitalCount = 0;\nshort smallCount = 0;',
+    explanation: 'Initialize counters for capital and small letters.',
+    input: str,
+    modified: str,
+    mem: [`capitalCount=${capitalCount}`, `smallCount=${smallCount}`]
+  });
+
+  for (let i = 0; i < str.length; i++) {
+    const ch = str[i];
+    const isCapital = ch >= 'A' && ch <= 'Z';
+    const isSmall = ch >= 'a' && ch <= 'z';
+    let explanation = `Processing character '${ch}': `;
+    const currentMem: string[] = [];
+    
+    if (isCapital) {
+      capitalCount++;
+      explanation += `It's a capital letter. Incrementing capital count.`;
+    } else if (isSmall) {
+      smallCount++;
+      explanation += `It's a small letter. Incrementing small count.`;
+    } else {
+      explanation += `Not an alphabet character. No change in counts.`;
+    }
+    
+    currentMem.push(`capitalCount=${capitalCount}`, `smallCount=${smallCount}`);
+
+    steps.push({
+      i,
+      code: `// Check S1[${i}] which is '${ch}'`,
+      explanation: explanation,
+      input: str,
+      modified: str,
+      mem: currentMem
+    });
+  }
+
+  steps.push({
+    i: str.length,
+    code: 'return;',
+    explanation: 'Finished counting all characters in the string.',
+    input: str,
+    modified: str,
+    mem: [`Final capitalCount=${capitalCount}`, `Final smallCount=${smallCount}`],
+    output: [`Caps: ${capitalCount}, Smalls: ${smallCount}`]
+  });
+  return steps;
+}
+
 export const problems: Problem[] = [
   { id: 1, title: 'Problem 1 — Print First Letter of Each Word', description: 'Read a string and print the first letter of every word.', example: 'programming is fun', generator: genPrintFirstLettersSteps, functions: [
     {name: 'ReadString()', signature: 'string ReadString()', explanation: 'Reads a full line including spaces.', code: `string ReadString()\n{\n    string S1;\n    getline(cin, S1);\n    return S1;\n}`},
@@ -170,5 +224,10 @@ export const problems: Problem[] = [
   { id: 5, title: 'Problem 5 — Invert Letter Case', description: 'Read a single character, invert its case (upper to lower, lower to upper), and print the result.', example: 'a', generator: genInvertCaseSteps, functions: [
     { name: 'ReadChar()', signature: 'char ReadChar()', explanation: 'Reads a single character from the input.', code: `char ReadChar()\n{\n    char Ch1;\n    cout << "Please Enter a Character?\\n";\n    cin >> Ch1;\n    return Ch1;\n}` },
     { name: 'InvertLetterCase(char char1)', signature: 'char InvertLetterCase(char char1)', explanation: 'Checks if a character is uppercase. If so, it converts it to lowercase. Otherwise, it converts it to uppercase.', code: `char InvertLetterCase(char char1)\n{\n    return isupper(char1) ? tolower(char1) : toupper(char1);\n}` }
-  ], keyConcepts: ['Character I/O', 'Ternary Operator', 'Case Conversion', 'ASCII Values'] }
+  ], keyConcepts: ['Character I/O', 'Ternary Operator', 'Case Conversion', 'ASCII Values'] },
+  { id: 6, title: 'Problem 6 — Count Small/Capital Letters', description: 'Read a string and count the number of lowercase and uppercase letters.', example: 'Hello World', generator: genCountCaseSteps, functions: [
+    { name: 'ReadString()', signature: 'string ReadString()', explanation: 'Reads a full line including spaces.', code: `string ReadString()\n{\n    string S1;\n    cout << "Please Enter Your String?\\n";\n    getline(cin, S1);\n    return S1;\n}` },
+    { name: 'CountCapitalLetters(string S1)', signature: 'short CountCapitalLetters(string S1)', explanation: 'Iterates through the string and increments a counter for each uppercase character found.', code: `short CountCapitalLetters(string S1)\n{\n    short Counter = 0;\n    for (short i = 0; i < S1.length(); i++)\n    {\n        if (isupper(S1[i]))\n            Counter++;\n    }\n    return Counter;\n}` },
+    { name: 'CountSmallLetters(string S1)', signature: 'short CountSmallLetters(string S1)', explanation: 'Iterates through the string and increments a counter for each lowercase character found.', code: `short CountSmallLetters(string S1)\n{\n    short Counter = 0;\n    for (short i = 0; i < S1.length(); i++)\n    {\n        if (islower(S1[i]))\n            Counter++;\n    }\n    return Counter;\n}` }
+  ], keyConcepts: ['String Iteration', 'Counters', 'isupper()', 'islower()', 'Conditional Logic'] }
 ];

@@ -23,7 +23,7 @@ const FunctionCard: React.FC<FunctionCardProps> = ({ f }) => {
           <div className="text-sm font-semibold">{f.name}</div>
           <div className="text-xs mono text-gray-500">{f.signature}</div>
         </div>
-        <button onClick={() => setOpen(o => !o)} className="p-2 rounded-full bg-indigo-600 text-white hover:bg-indigo-700 transition-colors">
+        <button onClick={() => setOpen(o => !o)} className="p-2 rounded-full bg-teal-500 text-white hover:bg-teal-600 transition-colors">
           <Icon name={open ? 'minus' : 'plus'} />
         </button>
       </div>

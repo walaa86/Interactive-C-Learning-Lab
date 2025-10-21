@@ -26,12 +26,12 @@ function App() {
     <div className="max-w-7xl mx-auto">
       <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold">Interactive C++ Learning Lab</h1>
-          <p className="text-sm text-gray-600">Visualize code execution, trace with 'Paper & Pen', and inspect memory.</p>
+          <h1 className="text-3xl font-extrabold text-slate-700">Interactive C++ Learning Lab</h1>
+          <p className="text-sm text-gray-500">Visualize code execution, trace with 'Paper & Pen', and inspect memory.</p>
         </div>
         <nav className="flex gap-2 flex-wrap">
           {problems.map(p => (
-            <button key={p.id} onClick={() => setPage(p.id)} className={'px-4 py-2 rounded text-sm ' + (page === p.id ? 'badge' : 'bg-white/60')}>
+            <button key={p.id} onClick={() => setPage(p.id)} className={'px-4 py-2 rounded text-sm font-semibold ' + (page === p.id ? 'badge' : 'bg-white hover:bg-sky-100 transition-colors')}>
               {p.title.split('—')[0]}
             </button>
           ))}
