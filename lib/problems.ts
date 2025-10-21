@@ -545,6 +545,233 @@ function genPrintVowelsSteps(str: string): Step[] {
   return steps;
 }
 
+function genPrintWordsSteps(str: string): Step[] {
+  const steps: Step[] = [];
+  let s1 = str;
+  let output: string[] = [];
+  const delim = " ";
+  let stepCounter = 0;
+
+  steps.push({
+    i: stepCounter++,
+    code: `string S1 = "${str}";`,
+    explanation: 'Start with the initial string.',
+    input: str,
+    modified: s1,
+    output: [...output],
+    mem: [`S1 = "${s1}"`]
+  });
+
+  while (true) {
+    const pos = s1.indexOf(delim);
+
+    steps.push({
+      i: stepCounter++,
+      code: `pos = S1.find("${delim}")`,
+      explanation: `Search for delimiter " ". Found at index: ${pos}. (npos is -1)`,
+      input: str,
+      modified: s1,
+      output: [...output],
+      mem: [`pos = ${pos}`]
+    });
+    
+    steps.push({
+      i: stepCounter++,
+      code: `while (pos != std::string::npos)`,
+      explanation: `Check loop condition: ${pos} != -1. Condition is ${pos !== -1 ? 'true, enter loop' : 'false, exit loop'}.`,
+      input: str,
+      modified: s1,
+      output: [...output],
+      mem: [`Continue loop? ${pos !== -1}`]
+    });
+    
+    if (pos === -1) {
+      break; 
+    }
+
+    const sWord = s1.substring(0, pos);
+    steps.push({
+      i: stepCounter++,
+      code: `sWord = S1.substr(0, ${pos});`,
+      explanation: `Extract word from index 0 up to delimiter. Word is "${sWord}".`,
+      input: str,
+      modified: s1,
+      output: [...output],
+      mem: [`sWord = "${sWord}"`]
+    });
+
+    if (sWord !== "") {
+        output.push(sWord);
+        steps.push({
+          i: stepCounter++,
+          code: `cout << sWord << endl;`,
+          explanation: `Print the extracted word: "${sWord}".`,
+          input: str,
+          modified: s1,
+          output: [...output],
+          mem: [`Printed: "${sWord}"`]
+        });
+    }
+
+    const s1BeforeErase = s1;
+    s1 = s1.substring(pos + delim.length);
+    steps.push({
+      i: stepCounter++,
+      code: `S1.erase(0, ${pos} + ${delim.length});`,
+      explanation: `Erase processed part from S1. The string is now shorter.`,
+      input: str,
+      modified: s1,
+      output: [...output],
+      mem: [`S1 was: "${s1BeforeErase}"`, `S1 is now: "${s1}"`]
+    });
+  }
+
+  // After loop
+  if (s1 !== "") {
+    output.push(s1);
+    steps.push({
+      i: stepCounter++,
+      code: `cout << S1 << endl;`,
+      explanation: `Loop finished. Print the last remaining word: "${s1}".`,
+      input: str,
+      modified: s1,
+      output: [...output],
+      mem: [`Printed last word: "${s1}"`]
+    });
+  } else {
+    steps.push({
+      i: stepCounter++,
+      code: `// After loop`,
+      explanation: `Loop finished. No remaining characters to print.`,
+      input: str,
+      modified: s1,
+      output: [...output],
+      mem: [`S1 is empty.`]
+    });
+  }
+
+  steps.push({
+    i: stepCounter++,
+    code: 'return 0;',
+    explanation: 'Program finished.',
+    input: str,
+    modified: s1,
+    output: [...output],
+    mem: [`Final output complete.`]
+  });
+
+  return steps;
+}
+
+function genCountWordsSteps(str: string): Step[] {
+  const steps: Step[] = [];
+  let s1 = str;
+  let counter = 0;
+  const delim = " ";
+  let stepCounter = 0;
+
+  steps.push({
+    i: stepCounter++,
+    code: `string S1 = "${str}";\nshort Counter = 0;`,
+    explanation: 'Start with the initial string and initialize Counter to 0.',
+    input: str,
+    modified: s1,
+    mem: [`S1 = "${s1}"`, `Counter=${counter}`]
+  });
+
+  while (true) {
+    const pos = s1.indexOf(delim);
+
+    steps.push({
+      i: stepCounter++,
+      code: `pos = S1.find("${delim}")`,
+      explanation: `Search for delimiter " ". Found at index: ${pos}. (npos is -1)`,
+      input: str,
+      modified: s1,
+      mem: [`pos = ${pos}`, `Counter=${counter}`]
+    });
+    
+    steps.push({
+      i: stepCounter++,
+      code: `while (pos != std::string::npos)`,
+      explanation: `Check loop condition: ${pos} != -1. Condition is ${pos !== -1 ? 'true, enter loop' : 'false, exit loop'}.`,
+      input: str,
+      modified: s1,
+      mem: [`Continue loop? ${pos !== -1}`, `Counter=${counter}`]
+    });
+    
+    if (pos === -1) {
+      break; 
+    }
+
+    const sWord = s1.substring(0, pos);
+    steps.push({
+      i: stepCounter++,
+      code: `sWord = S1.substr(0, ${pos});`,
+      explanation: `Extract word from index 0 up to delimiter. Word is "${sWord}".`,
+      input: str,
+      modified: s1,
+      mem: [`sWord = "${sWord}"`, `Counter=${counter}`]
+    });
+
+    if (sWord !== "") {
+        counter++;
+        steps.push({
+          i: stepCounter++,
+          code: `if (sWord != "") { Counter++; }`,
+          explanation: `Word "${sWord}" is not empty. Incrementing counter.`,
+          input: str,
+          modified: s1,
+          mem: [`Counter=${counter}`]
+        });
+    }
+
+    const s1BeforeErase = s1;
+    s1 = s1.substring(pos + delim.length);
+    steps.push({
+      i: stepCounter++,
+      code: `S1.erase(0, ${pos} + ${delim.length});`,
+      explanation: `Erase processed part from S1. The string is now shorter.`,
+      input: str,
+      modified: s1,
+      mem: [`S1 was: "${s1BeforeErase}"`, `S1 is now: "${s1}"`, `Counter=${counter}`]
+    });
+  }
+
+  // After loop
+  if (s1 !== "") {
+    counter++;
+    steps.push({
+      i: stepCounter++,
+      code: `if (S1 != "") { Counter++; }`,
+      explanation: `Loop finished. Count the last remaining word: "${s1}".`,
+      input: str,
+      modified: s1,
+      mem: [`Counter=${counter}`]
+    });
+  } else {
+    steps.push({
+      i: stepCounter++,
+      code: `// After loop`,
+      explanation: `Loop finished. No remaining characters to count.`,
+      input: str,
+      modified: s1,
+      mem: [`S1 is empty.`, `Counter=${counter}`]
+    });
+  }
+
+  steps.push({
+    i: stepCounter++,
+    code: 'return Counter;',
+    explanation: `Program finished. Total word count is ${counter}.`,
+    input: str,
+    modified: s1,
+    output: [`The number of words is: ${counter}`],
+    mem: [`Final Count = ${counter}`]
+  });
+
+  return steps;
+}
 
 export const problems: Problem[] = [
   { id: 1, title: 'Problem 1 — Print First Letter of Each Word', description: 'Read a string and print the first letter of every word.', example: 'programming is fun', generator: genPrintFirstLettersSteps, functions: [
@@ -687,5 +914,49 @@ export const problems: Problem[] = [
       }
     ],
     keyConcepts: ['String Iteration', 'Helper Functions', 'Conditional Logic', 'Character Output', 'void Functions']
+  },
+  {
+    id: 12,
+    title: 'Problem 12 — Print Each Word in a String',
+    description: 'Read a string and print each word on a new line.',
+    example: 'programming is fun',
+    generator: genPrintWordsSteps,
+    functions: [
+      {
+        name: 'ReadString()',
+        signature: 'string ReadString()',
+        explanation: 'Reads a full line of text from the user.',
+        code: `string ReadString()\n{\n    string S1;\n    cout << "Please Enter Your String?\\n";\n    getline(cin, S1);\n    return S1;\n}`
+      },
+      {
+        name: 'PrintEachWordInString(string S1)',
+        signature: 'void PrintEachWordInString(string S1)',
+        explanation: 'Uses a while loop with find, substr, and erase to extract and print each word.',
+        code: `void PrintEachWordInString(string S1)\n{\n    string delim = " ";\n    cout << "\\nYour string words are: \\n\\n";\n    short pos = 0;\n    string sWord;\n    while ((pos = S1.find(delim)) != std::string::npos)\n    {\n        sWord = S1.substr(0, pos);\n        if (sWord != "")\n        {\n            cout << sWord << endl;\n        }\n        S1.erase(0, pos + delim.length());\n    }\n    if (S1 != "")\n    {\n        cout << S1 << endl;\n    }\n}`
+      }
+    ],
+    keyConcepts: ['String Manipulation', 'find()', 'substr()', 'erase()', 'While Loop']
+  },
+  {
+    id: 13,
+    title: 'Problem 13 — Count Each Word in a String',
+    description: 'Write a program to read a string then count each word in that string.',
+    example: 'Mohammed Abu-Hadhoud @ProgrammingAdvices',
+    generator: genCountWordsSteps,
+    functions: [
+      {
+        name: 'ReadString()',
+        signature: 'string ReadString()',
+        explanation: 'Reads a full line of text from the user.',
+        code: `string ReadString()\n{\n    string S1;\n    cout << "Please Enter Your String?\\n";\n    getline(cin, S1);\n    return S1;\n}`
+      },
+      {
+        name: 'CountWords(string S1)',
+        signature: 'short CountWords(string S1)',
+        explanation: 'Uses a while loop with find, substr, and erase to extract and count each word.',
+        code: `short CountWords(string S1)\n{\n    string delim = " ";\n    short Counter = 0;\n    short pos = 0;\n    string sWord;\n    while ((pos = S1.find(delim)) != std::string::npos)\n    {\n        sWord = S1.substr(0, pos);\n        if (sWord != "")\n        {\n            Counter++;\n        }\n        S1.erase(0, pos + delim.length());\n    }\n    if (S1 != "")\n    {\n        Counter++;\n    }\n    return Counter;\n}`
+      }
+    ],
+    keyConcepts: ['String Manipulation', 'find()', 'substr()', 'erase()', 'While Loop', 'Counters']
   }
 ];

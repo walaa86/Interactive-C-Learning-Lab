@@ -134,6 +134,17 @@ const Visualizer: React.FC<VisualizerProps> = ({ problem }) => {
     cout << endl;
             `;
             break;
+        case 12:
+            mainBody = `
+    PrintEachWordInString(${readStringFn ? readStringFn.name + "()" : "/* Read string logic here */"});
+            `;
+            break;
+        case 13:
+            mainBody = `
+    string S1 = ${readStringFn ? readStringFn.name + "();" : "/* Read string logic here */"}
+    cout << "\\nThe number of words in your string is: " << CountWords(S1) << endl;
+            `;
+            break;
         default:
             mainBody = `    // TODO: Implement main execution logic for this problem.`;
     }
@@ -202,11 +213,12 @@ ${mainBody}
   };
 
   const isFirstLetterFlag = current.mem?.find(m => m.includes('isFirst'));
-  const isLoopProblem = problem.id <= 4 || problem.id === 6 || problem.id === 7 || problem.id === 8 || problem.id === 10 || problem.id === 11;
+  const isIndexedLoopProblem = [1, 2, 3, 4, 6, 7, 8, 10, 11].includes(problem.id);
   const isCounterProblem = problem.id === 6;
   const isSpecificCounterProblem = problem.id === 7;
   const isCaseInsensitiveCounterProblem = problem.id === 8;
   const isVowelCounterProblem = problem.id === 10;
+  const isWordCounterProblem = problem.id === 13;
 
   return (
     <div className="card">
@@ -240,7 +252,7 @@ ${mainBody}
           <div className="lg:col-span-2">
             <div className="mb-4">
               <div className="text-sm font-semibold mb-2">Original Input (Read-Only)</div>
-               {isLoopProblem ? (
+               {isIndexedLoopProblem ? (
                   <div className="p-3 border rounded bg-white overflow-x-auto">
                     <table className="w-full border-collapse">
                       <thead>
@@ -258,8 +270,8 @@ ${mainBody}
                     </table>
                   </div>
                 ) : (
-                  <div className="p-3 border rounded bg-white flex flex-col items-center justify-center h-32">
-                    <div className="text-5xl font-bold mono p-4">{charList[0] || ''}</div>
+                  <div className="p-3 border rounded bg-white flex items-center justify-center min-h-[96px]">
+                    <div className="text-2xl font-bold mono p-4">{[12, 13].includes(problem.id) ? input : (charList[0] || '')}</div>
                   </div>
                 )}
             </div>
@@ -293,7 +305,7 @@ ${mainBody}
           <aside>
             <div className="sticky top-6 space-y-4">
               <div className="card">
-                <div className="text-xs text-gray-500 mb-2">{isLoopProblem ? 'Loop Variable: i' : 'Execution Step'}</div>
+                <div className="text-xs text-gray-500 mb-2">{isIndexedLoopProblem ? 'Loop Variable: i' : 'Execution Step'}</div>
                 <div className="p-4 bg-sky-100 rounded text-center mono font-bold text-xl">{current.i === undefined || current.i < 0 ? 'START' : current.i}</div>
               </div>
 
@@ -418,6 +430,26 @@ ${mainBody}
                               <div>
                                   <div className="text-xs text-gray-500">Vowels Found</div>
                                   <div className="p-2 bg-rose-100 rounded mt-1 font-bold text-lg">{count}</div>
+                              </div>
+                          </div>
+                      </div>
+                  )
+              })()}
+
+              {isWordCounterProblem && (() => {
+                  let count = '0';
+                  if (current.mem) {
+                      const memString = current.mem.join('|');
+                      const countMatch = memString.match(/Counter=(\d+)/g);
+                      if (countMatch) count = countMatch[countMatch.length - 1].split('=')[1];
+                  }
+                  return (
+                      <div className="card">
+                          <div className="text-sm font-semibold mb-2">Live Word Counter</div>
+                          <div className="grid grid-cols-1 gap-2 text-center">
+                              <div>
+                                  <div className="text-xs text-gray-500">Words Found</div>
+                                  <div className="p-2 bg-fuchsia-100 rounded mt-1 font-bold text-lg">{count}</div>
                               </div>
                           </div>
                       </div>
