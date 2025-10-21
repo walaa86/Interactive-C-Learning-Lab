@@ -1417,6 +1417,70 @@ function genReplaceWordSteps(combinedStr: string): Step[] {
   return steps;
 }
 
+function genRemovePunctuationsSteps(str: string): Step[] {
+  const steps: Step[] = [];
+  let S2 = "";
+  const punctuation = '!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~';
+
+  steps.push({
+    i: -1,
+    code: `string S2 = "";`,
+    explanation: 'Initialize an empty string `S2` to store the result without punctuations.',
+    input: str,
+    modified: S2,
+    mem: [`S2 = ""`],
+  });
+
+  for (let i = 0; i < str.length; i++) {
+    const ch = str[i];
+    const isPunctuation = punctuation.includes(ch);
+
+    steps.push({
+      i,
+      code: `if (!ispunct(S1[${i}]))`,
+      explanation: `Checking character '${ch}' at index ${i}. Is it punctuation? ${isPunctuation ? 'Yes' : 'No'}.`,
+      input: str,
+      modified: S2,
+      mem: [`ispunct('${ch}') -> ${isPunctuation}`]
+    });
+
+    if (!isPunctuation) {
+      const s2Before = S2;
+      S2 += ch;
+      steps.push({
+        i,
+        code: `S2 += S1[${i}];`,
+        explanation: `Character '${ch}' is not punctuation. Appending it to S2.`,
+        input: str,
+        modified: S2,
+        mem: [`S2 was: "${s2Before}"`, `S2 is now: "${S2}"`]
+      });
+    }
+  }
+
+  steps.push({
+    i: str.length,
+    code: `return S2;`,
+    explanation: 'Finished loop. Returning the string with punctuations removed.',
+    input: str,
+    modified: S2,
+    output: [S2],
+    mem: [`Final result: "${S2}"`]
+  });
+
+  steps.push({
+    i: str.length + 1,
+    code: 'return 0;',
+    explanation: 'Program finished.',
+    input: str,
+    modified: S2,
+    output: [S2],
+    mem: ['Done']
+  });
+
+  return steps;
+}
+
 
 export const problems: Problem[] = [
   { id: 1, title: 'Problem 1 — Print First Letter of Each Word', description: 'Read a string and print the first letter of every word.', example: 'programming is fun', generator: genPrintFirstLettersSteps, functions: [
@@ -1735,5 +1799,21 @@ export const problems: Problem[] = [
         }
     ],
     keyConcepts: ['string::find', 'string::replace', 'While Loop', 'std::string::npos', 'String Manipulation']
+  },
+  {
+    id: 20,
+    title: 'Problem 20 — Remove Punctuations',
+    description: 'Read a string and remove all punctuation characters from it.',
+    example: 'Welcome, to Jordan; Jordan is a nice country.',
+    generator: genRemovePunctuationsSteps,
+    functions: [
+        {
+            name: 'RemovePunctuationsFromString',
+            signature: 'string RemovePunctuationsFromString(string S1)',
+            explanation: 'Iterates through the input string. For each character, it uses `ispunct()` to check if it is a punctuation mark. If not, the character is appended to a new result string.',
+            code: `string RemovePunctuationsFromString(string S1)\n{\n    string S2 = "";\n    \n    for (short i = 0; i < S1.length(); i++)\n    {\n        if (!ispunct(S1[i]))\n        {\n            S2 += S1[i];\n        }\n    }\n    \n    return S2;\n}`
+        }
+    ],
+    keyConcepts: ['String Iteration', 'ispunct()', 'String Concatenation', 'cctype library', 'Building Strings']
   }
 ];
