@@ -1692,6 +1692,145 @@ function genLineToStructSteps(line: string): Step[] {
     return steps;
 }
 
+function genAddClientsToFileSteps(str: string): Step[] {
+  const steps: Step[] = [];
+  let stepCounter = 0;
+  
+  const predefinedClients = [
+    { AccountNumber: "A101", PinCode: "1111", Name: "John Smith", Phone: "555-0101", AccountBalance: 4500.50 },
+    { AccountNumber: "A102", PinCode: "2222", Name: "Jane Doe", Phone: "555-0102", AccountBalance: 8250.00 }
+  ];
+  const separator = "#//#";
+  let fileContents: string[] = [];
+  
+  steps.push({
+    i: stepCounter++,
+    code: `do { ... } while (toupper(AddMore) == 'Y');`,
+    explanation: 'Begin do-while loop to add new clients.',
+    input: str,
+    mem: ['Starting main loop'],
+    fileContents: [...fileContents]
+  });
+
+  predefinedClients.forEach((clientData, index) => {
+    const isLastIteration = index === predefinedClients.length - 1;
+    const client: any = { AccountNumber: "", PinCode: "", Name: "", Phone: "", AccountBalance: 0.0 };
+
+    // --- Phase: Read Client Data ---
+    steps.push({
+      i: stepCounter++,
+      phase: 'read_client',
+      loop: { iteration: index + 1, continue: true },
+      code: `Client = ReadNewClient();`,
+      explanation: `Simulating reading data for client ${index + 1}.`,
+      input: str,
+      mem: [`Reading client ${index + 1}`],
+      fileContents: [...fileContents]
+    });
+    
+    Object.entries(clientData).forEach(([key, value]) => {
+      const field = key as 'AccountNumber' | 'PinCode' | 'Name' | 'Phone' | 'AccountBalance';
+      client[field] = value;
+      steps.push({
+        i: stepCounter++,
+        phase: 'read_client',
+        field: field,
+        loop: { iteration: index + 1, continue: true },
+        code: `// Reading ${field}...`,
+        explanation: `Simulated user input for ${field}: "${value}".`,
+        input: str,
+        mem: [`Client.${field} = ${value}`],
+        fileContents: [...fileContents]
+      });
+    });
+
+    // --- Phase: Convert Record to Line ---
+    let clientLine = "";
+    steps.push({
+      i: stepCounter++,
+      phase: 'convert_client',
+      loop: { iteration: index + 1, continue: true },
+      code: `ConvertRecordToLine(Client);`,
+      explanation: `Converting the client struct to a delimited string.`,
+      input: str,
+      modified: clientLine,
+      mem: [`Separator: "${separator}"`],
+      fileContents: [...fileContents]
+    });
+
+    clientLine += client.AccountNumber + separator;
+    steps.push({i: stepCounter++, phase: 'convert_client', field: 'AccountNumber', loop: { iteration: index + 1, continue: true }, code: `stClientRecord += Client.AccountNumber + ...`, explanation: `Appending AccountNumber.`, input: str, modified: clientLine, mem: [], fileContents: [...fileContents] });
+    clientLine += client.PinCode + separator;
+    steps.push({i: stepCounter++, phase: 'convert_client', field: 'PinCode', loop: { iteration: index + 1, continue: true }, code: `stClientRecord += Client.PinCode + ...`, explanation: `Appending PinCode.`, input: str, modified: clientLine, mem: [], fileContents: [...fileContents] });
+    clientLine += client.Name + separator;
+    steps.push({i: stepCounter++, phase: 'convert_client', field: 'Name', loop: { iteration: index + 1, continue: true }, code: `stClientRecord += Client.Name + ...`, explanation: `Appending Name.`, input: str, modified: clientLine, mem: [], fileContents: [...fileContents] });
+    clientLine += client.Phone + separator;
+    steps.push({i: stepCounter++, phase: 'convert_client', field: 'Phone', loop: { iteration: index + 1, continue: true }, code: `stClientRecord += Client.Phone + ...`, explanation: `Appending Phone.`, input: str, modified: clientLine, mem: [], fileContents: [...fileContents] });
+    clientLine += client.AccountBalance.toString();
+    steps.push({i: stepCounter++, phase: 'convert_client', field: 'AccountBalance', loop: { iteration: index + 1, continue: true }, code: `stClientRecord += to_string(Client.AccountBalance);`, explanation: `Appending AccountBalance.`, input: str, modified: clientLine, mem: [`Final line: "${clientLine}"`], fileContents: [...fileContents] });
+
+
+    // --- Phase: Save to File ---
+    steps.push({
+      i: stepCounter++,
+      phase: 'save_client',
+      loop: { iteration: index + 1, continue: true },
+      code: `AddDataLineToFile(ClientsFileName, "${clientLine.substring(0, 15)}...");`,
+      explanation: `Opening "Clients.txt" in append mode to save the record.`,
+      input: str,
+      modified: clientLine,
+      mem: [`Opening file...`],
+      fileContents: [...fileContents]
+    });
+    
+    fileContents.push(clientLine);
+    steps.push({
+      i: stepCounter++,
+      phase: 'save_client',
+      loop: { iteration: index + 1, continue: true },
+      code: `MyFile << stDataLine << endl;`,
+      explanation: `Record for "${client.Name}" written to file successfully.`,
+      input: str,
+      modified: clientLine,
+      mem: [`Closing file...`],
+      fileContents: [...fileContents]
+    });
+
+    // --- Phase: Loop Check ---
+    steps.push({
+      i: stepCounter++,
+      phase: 'loop_check',
+      loop: { iteration: index + 1, continue: !isLastIteration },
+      code: `cout << "...do you want to add more clients? Y/N? "; cin >> AddMore;`,
+      explanation: `Simulating user answering '${isLastIteration ? 'N' : 'Y'}' to continue.`,
+      input: str,
+      mem: [`AddMore = '${isLastIteration ? 'N' : 'Y'}'`],
+      fileContents: [...fileContents]
+    });
+    
+    steps.push({
+      i: stepCounter++,
+      phase: 'loop_check',
+      loop: { iteration: index + 1, continue: !isLastIteration },
+      code: `} while (toupper(AddMore) == 'Y');`,
+      explanation: `Checking condition: '${isLastIteration ? 'N' : 'Y'}' == 'Y' is ${!isLastIteration}. The loop will ${!isLastIteration ? 'continue' : 'terminate'}.`,
+      input: str,
+      mem: [`Loop continues: ${!isLastIteration}`],
+      fileContents: [...fileContents]
+    });
+  });
+
+  steps.push({
+    i: stepCounter++,
+    code: 'return 0;',
+    explanation: 'Program finished. All clients have been saved.',
+    input: str,
+    mem: ['Done'],
+    fileContents: [...fileContents]
+  });
+
+  return steps;
+}
 
 export const problems: Problem[] = [
   { id: 1, title: 'Problem 1 — Print First Letter of Each Word', description: 'Read a string and print the first letter of every word.', example: 'programming is fun', generator: genPrintFirstLettersSteps, functions: [
@@ -2070,5 +2209,39 @@ export const problems: Problem[] = [
       }
     ],
     keyConcepts: ['Data Deserialization', 'String Parsing', 'std::vector', 'stod()', 'struct']
+  },
+  {
+    id: 23,
+    title: 'Problem 23 — Add Multiple Clients to a File',
+    description: 'Simulate reading multiple client records from a user and saving each one as a single line in a file.',
+    example: 'This problem is a simulation and does not take input.',
+    generator: genAddClientsToFileSteps,
+    functions: [
+      {
+        name: 'ReadNewClient',
+        signature: 'sClient ReadNewClient()',
+        explanation: 'Prompts the user to enter all fields for a new client and returns a populated sClient struct. Uses `cin >> ws` to handle whitespace before reading the account number.',
+        code: `struct sClient\n{\n    string AccountNumber;\n    string PinCode;\n    string Name;\n    string Phone;\n    double AccountBalance;\n};\n\nsClient ReadNewClient()\n{\n    sClient Client;\n    cout << "Enter Account Number? ";\n    getline(cin >> ws, Client.AccountNumber);\n    cout << "Enter PinCode? ";\n    getline(cin, Client.PinCode);\n    cout << "Enter Name? ";\n    getline(cin, Client.Name);\n    cout << "Enter Phone? ";\n    getline(cin, Client.Phone);\n    cout << "Enter AccountBalance? ";\n    cin >> Client.AccountBalance;\n    return Client;\n}`
+      },
+      {
+        name: 'ConvertRecordToLine',
+        signature: 'string ConvertRecordToLine(sClient Client, string Seperator)',
+        explanation: 'Takes a client struct and concatenates its fields into a single string, separated by the provided delimiter.',
+        code: `string ConvertRecordToLine(sClient Client, string Seperator = "#//#")\n{\n    string stClientRecord = "";\n    stClientRecord += Client.AccountNumber + Seperator;\n    stClientRecord += Client.PinCode + Seperator;\n    stClientRecord += Client.Name + Seperator;\n    stClientRecord += Client.Phone + Seperator;\n    stClientRecord += to_string(Client.AccountBalance);\n    return stClientRecord;\n}`
+      },
+      {
+        name: 'AddDataLineToFile',
+        signature: 'void AddDataLineToFile(string FileName, string stDataLine)',
+        explanation: 'Opens a file in append mode (`ios::out | ios::app`) and writes a given line of data to it, followed by a newline.',
+        code: `void AddDataLineToFile(string FileName, string stDataLine)\n{\n    fstream MyFile;\n    MyFile.open(FileName, ios::out | ios::app);\n    if (MyFile.is_open())\n    {\n        MyFile << stDataLine << endl;\n        MyFile.close();\n    }\n}`
+      },
+       {
+        name: 'AddClients',
+        signature: 'void AddClients()',
+        explanation: 'Uses a do-while loop to repeatedly ask the user to add new clients until they choose to stop. It calls other functions to handle the details of reading and saving.',
+        code: `void AddClients()\n{\n    char AddMore = 'Y';\n    do\n    {\n        cout << "Adding New Client:\\n\\n";\n        AddNewClient();\n        cout << "\\nClient Added Successfully, do you want to add more clients? Y/N? ";\n        cin >> AddMore;\n    } while (toupper(AddMore) == 'Y');\n}`
+      }
+    ],
+    keyConcepts: ['File I/O', 'fstream', 'ios::app', 'do-while loop', 'Function Composition', 'User Input Simulation']
   }
 ];

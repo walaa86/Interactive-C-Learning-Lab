@@ -14,8 +14,13 @@ export interface Step {
   output?: string[];
   modified?: string;
   mem: string[];
-  phase?: 'upper' | 'lower' | 'read' | 'invert' | 'print' | 'sensitive' | 'insensitive' | 'convert' | 'check' | 'result' | 'left' | 'right' | 'all' | 'vector' | 'array' | 'split' | 'reverse' | 'assign';
+  phase?: 'upper' | 'lower' | 'read' | 'invert' | 'print' | 'sensitive' | 'insensitive' | 'convert' | 'check' | 'result' | 'left' | 'right' | 'all' | 'vector' | 'array' | 'split' | 'reverse' | 'assign' | 'read_client' | 'convert_client' | 'save_client' | 'loop_check';
   field?: 'AccountNumber' | 'PinCode' | 'Name' | 'Phone' | 'AccountBalance';
+  fileContents?: string[];
+  loop?: {
+    iteration: number;
+    continue: boolean;
+  };
 }
 
 export interface Problem {
