@@ -32,7 +32,7 @@ const Visualizer: React.FC<VisualizerProps> = ({ problem }) => {
   }, [input, problem]);
 
   const current = steps[pos] || steps[0];
-  const stringPart = problem.id === 7 && input.includes('|') ? input.split('|')[0] : input;
+  const stringPart = (problem.id === 7 || problem.id === 8) && input.includes('|') ? input.split('|')[0] : input;
   const charList = (stringPart || '').split('');
 
 
@@ -97,6 +97,28 @@ const Visualizer: React.FC<VisualizerProps> = ({ problem }) => {
     string s = ${readStringFn ? readStringFn.name + "();" : "/* Read string logic here */"}
     char c = ${readCharFn ? readCharFn.name + "();" : "/* Read char logic here */"}
     cout << "\\nLetter '" << c << "' Count = " << CountLetter(s, c) << endl;
+            `;
+            break;
+        case 8:
+            mainBody = `
+    string s = ${readStringFn ? readStringFn.name + "();" : "/* Read string logic here */"}
+    char c = ${readCharFn ? readCharFn.name + "();" : "/* Read char logic here */"}
+    
+    cout << "\\nLetter '" << c << "' Count = " << CountLetter(s, c);
+    
+    cout << "\\nLetter '" << c << "' or '" << InvertLetterCase(c) << "' Count = " << CountLetter(s, c, false) << endl;
+            `;
+            break;
+        case 9:
+            mainBody = `
+    char c = ${readCharFn ? readCharFn.name + "();" : "/* Read char logic here */"}
+    
+    if (IsVowel(c))
+        cout << "\\nYES Letter '" << c << "' is vowel";
+    else
+        cout << "\\nNO Letter '" << c << "' is NOT vowel";
+    
+    cout << endl;
             `;
             break;
         default:
@@ -167,9 +189,10 @@ ${mainBody}
   };
 
   const isFirstLetterFlag = current.mem?.find(m => m.includes('isFirst'));
-  const isLoopProblem = problem.id <= 4 || problem.id === 6 || problem.id === 7;
+  const isLoopProblem = problem.id <= 4 || problem.id === 6 || problem.id === 7 || problem.id === 8;
   const isCounterProblem = problem.id === 6;
   const isSpecificCounterProblem = problem.id === 7;
+  const isCaseInsensitiveCounterProblem = problem.id === 8;
 
   return (
     <div className="card">
@@ -186,7 +209,7 @@ ${mainBody}
         </div>
         <div className="mb-3">
           <label className="text-xs font-medium">Input:</label>
-          <input value={input} onChange={e => setInput(problem.id === 5 ? e.target.value.slice(0, 1) : e.target.value)} className="w-full mt-2 p-3 rounded text-lg mono bg-sky-50 border-2 border-cyan-300 focus:border-teal-500 focus:ring focus:ring-teal-200 focus:ring-opacity-50 transition-colors duration-200 ease-in-out" />
+          <input value={input} onChange={e => setInput((problem.id === 5 || problem.id === 9) ? e.target.value.slice(0, 1) : e.target.value)} className="w-full mt-2 p-3 rounded text-lg mono bg-sky-50 border-2 border-cyan-300 focus:border-teal-500 focus:ring focus:ring-teal-200 focus:ring-opacity-50 transition-colors duration-200 ease-in-out" />
           <div className="text-xs text-gray-500 mt-2">Try: {problem.example}</div>
         </div>
 
@@ -319,6 +342,52 @@ ${mainBody}
                           </div>
                       </div>
                   )
+              })()}
+
+              {isCaseInsensitiveCounterProblem && (() => {
+                  const targetChar = (input.split('|')[1] || '?')[0];
+                  
+                  const finalSensitiveStep = steps.find(s => s.phase === 'sensitive' && s.i === (input.split('|')[0] || '').length);
+                  const finalSensitiveMem = finalSensitiveStep?.mem.join('|') || '';
+                  const finalSensitiveMatch = finalSensitiveMem.match(/count=(\d+)/);
+                  const finalSensitiveCount = finalSensitiveMatch ? finalSensitiveMatch[1] : '0';
+
+                  let sensitiveCount = '0';
+                  let insensitiveCount = '0';
+
+                  if (current.phase === 'sensitive') {
+                      const memString = current.mem.join('|');
+                      const countMatch = memString.match(/count=(\d+)/);
+                      sensitiveCount = countMatch ? countMatch[1] : '0';
+                  } else { // 'insensitive' or end phase
+                      sensitiveCount = finalSensitiveCount;
+                      const memString = current.mem.join('|');
+                      const countMatch = memString.match(/count=(\d+)/);
+                      insensitiveCount = countMatch ? countMatch[1] : '0';
+                  }
+
+                  return (
+                      <div className="card">
+                          <div className="text-sm font-semibold mb-2">Live Counters</div>
+                          <div className="text-center mb-2">
+                              <div className="text-xs text-gray-500">Target Char</div>
+                              <div className="p-2 bg-purple-100 rounded mt-1 font-bold text-lg">{targetChar}</div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2 text-center">
+                              <div>
+                                  <div className="text-xs text-gray-500">Case-Sensitive</div>
+                                  <div className="p-2 bg-blue-100 rounded mt-1 font-bold text-lg">{sensitiveCount}</div>
+                              </div>
+                              <div>
+                                  <div className="text-xs text-gray-500">Case-Insensitive</div>
+                                  <div className="p-2 bg-green-100 rounded mt-1 font-bold text-lg">{insensitiveCount}</div>
+                              </div>
+                          </div>
+                          <div className="text-xs text-gray-500 mt-2 text-center p-2 bg-sky-50 rounded">
+                              Currently in: <span className="font-semibold">{current.phase === 'sensitive' ? 'Case-Sensitive' : 'Case-Insensitive'} Phase</span>
+                          </div>
+                      </div>
+                  );
               })()}
               
               <div className="card">

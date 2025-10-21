@@ -1,4 +1,3 @@
-
 export interface FunctionDef {
   name: string;
   signature: string;
@@ -14,7 +13,7 @@ export interface Step {
   output?: string[];
   modified?: string;
   mem: string[];
-  phase?: 'upper' | 'lower' | 'read' | 'invert' | 'print';
+  phase?: 'upper' | 'lower' | 'read' | 'invert' | 'print' | 'sensitive' | 'insensitive' | 'convert' | 'check' | 'result';
 }
 
 export interface Problem {

@@ -13,7 +13,7 @@ function genPrintFirstLettersSteps(str: string): Step[] {
       steps.push({ i, code: `cout << S1[${i}]`, explanation: `Printed '${ch}'`, input: str, output: [...output], modified: str, mem: [`Printed '${ch}'`] });
     }
     const newIsFirst = (ch === ' ');
-    steps.push({ i, code: `isFirstLetter = (S1[${i}] == ' ' ? true : false);`, explanation: `Set isFirstLetter = ${newIsFirst}`, input: str, output: [...output], modified: str, mem: [`isFirst -> ${newIsFirst}`] });
+    steps.push({ i, code: `isFirstLetter = (S1[${i}] == ' ' ? true : false);`, explanation: `Set isFirstLetter = ${newIsFirst}`, input: str, output: [...output], mem: [`isFirst -> ${newIsFirst}`] });
     isFirst = newIsFirst;
   }
   steps.push({ i: str.length, code: 'end', explanation: 'Done', input: str, output: [...output], modified: str, mem: [`Final output = ${output.join('')}`] });
@@ -261,6 +261,184 @@ function genCountLetterSteps(combinedStr: string): Step[] {
   return steps;
 }
 
+function genCountLetterCaseInsensitiveSteps(combinedStr: string): Step[] {
+  const [str, letterToCount] = combinedStr.includes('|') ? combinedStr.split('|') : [combinedStr, ''];
+  if (!letterToCount) {
+    return [{ i: -1, code: 'Error', explanation: 'Please provide a string and a character to count, separated by a pipe (|). E.g., "hello|l"', input: combinedStr, mem: [] }];
+  }
+  
+  const steps: Step[] = [];
+  let sensitiveCounter = 0;
+  let insensitiveCounter = 0;
+  const invertedLetter = letterToCount.toLowerCase() === letterToCount ? letterToCount.toUpperCase() : letterToCount.toLowerCase();
+
+  // Phase 1: Case-Sensitive
+  steps.push({
+    i: -1,
+    phase: 'sensitive',
+    code: 'CountLetter(S1, Ch1, true); // Case-Sensitive',
+    explanation: `Start case-sensitive count for target character '${letterToCount}'.`,
+    input: combinedStr,
+    modified: str,
+    mem: [`target='${letterToCount}'`, `count=${sensitiveCounter}`]
+  });
+
+  for (let i = 0; i < str.length; i++) {
+    const ch = str[i];
+    const match = ch === letterToCount;
+    
+    steps.push({
+      i,
+      phase: 'sensitive',
+      code: `if (S1[${i}] == Letter)`,
+      explanation: `Checking if '${ch}' matches '${letterToCount}'. Match: ${match ? 'Yes' : 'No'}.`,
+      input: combinedStr,
+      modified: str,
+      mem: [`target='${letterToCount}'`, `count=${sensitiveCounter}`]
+    });
+    
+    if (match) {
+      sensitiveCounter++;
+      steps.push({
+        i,
+        phase: 'sensitive',
+        code: `Counter++;`,
+        explanation: `Match found! Incrementing counter.`,
+        input: combinedStr,
+        modified: str,
+        mem: [`target='${letterToCount}'`, `count=${sensitiveCounter}`]
+      });
+    }
+  }
+
+  steps.push({
+    i: str.length,
+    phase: 'sensitive',
+    code: '// End of case-sensitive count',
+    explanation: `Finished first loop. Case-sensitive count for '${letterToCount}' is ${sensitiveCounter}.`,
+    input: combinedStr,
+    modified: str,
+    mem: [`count=${sensitiveCounter}`],
+    output: [`Sensitive Count: ${sensitiveCounter}`]
+  });
+
+  // Phase 2: Case-Insensitive
+  steps.push({
+    i: -1,
+    phase: 'insensitive',
+    code: 'CountLetter(S1, Ch1, false); // Case-Insensitive',
+    explanation: `Start case-insensitive count for target '${letterToCount}' or '${invertedLetter}'.`,
+    input: combinedStr,
+    modified: str,
+    mem: [`target='${letterToCount}' (case-insensitive)`, `count=${insensitiveCounter}`]
+  });
+  
+  for (let i = 0; i < str.length; i++) {
+    const ch = str[i];
+    const match = ch.toLowerCase() === letterToCount.toLowerCase();
+    
+    steps.push({
+      i,
+      phase: 'insensitive',
+      code: `if (tolower(S1[${i}]) == tolower(Letter))`,
+      explanation: `Checking if '${ch}' (as '${ch.toLowerCase()}') matches '${letterToCount}' (as '${letterToCount.toLowerCase()}'). Match: ${match ? 'Yes' : 'No'}.`,
+      input: combinedStr,
+      modified: str,
+      mem: [`target='${letterToCount}' (case-insensitive)`, `count=${insensitiveCounter}`]
+    });
+    
+    if (match) {
+      insensitiveCounter++;
+      steps.push({
+        i,
+        phase: 'insensitive',
+        code: `Counter++;`,
+        explanation: `Match found! Incrementing counter.`,
+        input: combinedStr,
+        modified: str,
+        mem: [`target='${letterToCount}' (case-insensitive)`, `count=${insensitiveCounter}`]
+      });
+    }
+  }
+
+  steps.push({
+    i: str.length,
+    phase: 'insensitive',
+    code: 'return;',
+    explanation: `Finished second loop. Case-insensitive count is ${insensitiveCounter}.`,
+    input: combinedStr,
+    modified: str,
+    mem: [`count=${insensitiveCounter}`],
+    output: [`Sensitive: ${sensitiveCounter}`, `Insensitive: ${insensitiveCounter}`]
+  });
+
+  return steps;
+}
+
+function genIsVowelSteps(str: string): Step[] {
+  const steps: Step[] = [];
+  const char = str ? str[0] : '';
+  if (!char) {
+    steps.push({ code: 'end', explanation: 'No input character provided.', input: '', mem: ['Program finished.'], i: -1 });
+    return steps;
+  }
+  const charLower = char.toLowerCase();
+  const isVowel = ['a', 'e', 'i', 'o', 'u'].includes(charLower);
+
+  steps.push({
+    i: 0,
+    phase: 'read',
+    code: 'char Ch1 = ReadChar();',
+    explanation: `Read the character '${char}'.`,
+    input: str,
+    modified: char,
+    mem: [`Ch1 = '${char}'`],
+  });
+  
+  steps.push({
+    i: 1,
+    phase: 'convert',
+    code: 'Ch1 = tolower(Ch1);',
+    explanation: `Convert '${char}' to lowercase for case-insensitive check. Result: '${charLower}'.`,
+    input: str,
+    modified: charLower,
+    mem: [`Ch1 becomes '${charLower}'`],
+  });
+
+  steps.push({
+    i: 2,
+    phase: 'check',
+    code: `return ((Ch1 == 'a') || (Ch1 == 'e') || ...);`,
+    explanation: `Checking if '${charLower}' is one of 'a', 'e', 'i', 'o', 'u'. Result is ${isVowel}.`,
+    input: str,
+    modified: charLower,
+    mem: [`IsVowel('${charLower}') -> ${isVowel}`],
+  });
+  
+  steps.push({
+    i: 3,
+    phase: 'result',
+    code: `if (IsVowel(Ch1)) { ... } else { ... }`,
+    explanation: `The check returned ${isVowel}, so the ${isVowel ? 'if' : 'else'} block is executed.`,
+    input: str,
+    modified: charLower,
+    output: [isVowel ? `YES Letter '${char}' is vowel` : `NO Letter '${char}' is NOT vowel`],
+    mem: [`Printed final result.`],
+  });
+
+  steps.push({
+    i: 4,
+    code: 'return 0;',
+    explanation: 'Program finished.',
+    input: str,
+    modified: charLower,
+    mem: ['Done'],
+  });
+
+  return steps;
+}
+
+
 export const problems: Problem[] = [
   { id: 1, title: 'Problem 1 — Print First Letter of Each Word', description: 'Read a string and print the first letter of every word.', example: 'programming is fun', generator: genPrintFirstLettersSteps, functions: [
     {name: 'ReadString()', signature: 'string ReadString()', explanation: 'Reads a full line including spaces.', code: `string ReadString()\n{\n    string S1;\n    getline(cin, S1);\n    return S1;\n}`},
@@ -290,5 +468,61 @@ export const problems: Problem[] = [
     { name: 'ReadString()', signature: 'string ReadString()', explanation: 'Reads a full line of text from the user.', code: `string ReadString()\n{\n    string S1;\n    cout << "\\nPlease Enter Your String?\\n";\n    getline(cin, S1);\n    return S1;\n}`},
     { name: 'ReadChar()', signature: 'char ReadChar()', explanation: 'Reads a single character from the user.', code: `char ReadChar()\n{\n    char Ch1;\n    cout << "\\nPlease Enter a Character?\\n";\n    cin >> Ch1;\n    return Ch1;\n}`},
     { name: 'CountLetter(string S1, char Letter)', signature: 'short CountLetter(string S1, char Letter)', explanation: 'Iterates through the string, compares each character with the target letter, and increments a counter on matches.', code: `short CountLetter(string S1, char Letter)\n{\n    short Counter = 0;\n    for (short i = 0; i < S1.length(); i++)\n    {\n        if (S1[i] == Letter)\n            Counter++;\n    }\n    return Counter;\n}`}
-  ], keyConcepts: ['String Iteration', 'Character Comparison', 'Counters', 'Function Parameters']}
+  ], keyConcepts: ['String Iteration', 'Character Comparison', 'Counters', 'Function Parameters']},
+  { 
+    id: 8, 
+    title: 'Problem 8 — Count a Specific Letter (Case Insensitive)', 
+    description: 'Read a string and a character, then count how many times that character appears, both case-sensitively and case-insensitively. Separate string and character with a pipe (|).', 
+    example: 'Programming is Fun|g', 
+    generator: genCountLetterCaseInsensitiveSteps, 
+    functions: [
+      { 
+        name: 'ReadString()', 
+        signature: 'string ReadString()', 
+        explanation: 'Reads a full line of text from the user.', 
+        code: `string ReadString()\n{\n    string S1;\n    cout << "\\nPlease Enter Your String?\\n";\n    getline(cin, S1);\n    return S1;\n}`
+      },
+      { 
+        name: 'ReadChar()', 
+        signature: 'char ReadChar()', 
+        explanation: 'Reads a single character from the user.', 
+        code: `char ReadChar()\n{\n    char Ch1;\n    cout << "\\nPlease Enter a Character?\\n";\n    cin >> Ch1;\n    return Ch1;\n}`
+      },
+      { 
+        name: 'InvertLetterCase(char char1)', 
+        signature: 'char InvertLetterCase(char char1)', 
+        explanation: 'Checks if a character is uppercase. If so, it converts it to lowercase. Otherwise, it converts it to uppercase.', 
+        code: `char InvertLetterCase(char char1)\n{\n    return isupper(char1) ? tolower(char1) : toupper(char1);\n}` 
+      },
+      { 
+        name: 'CountLetter(string S1, char Letter, bool MatchCase = true)', 
+        signature: 'short CountLetter(string S1, char Letter, bool MatchCase = true)', 
+        explanation: 'Iterates through the string, compares each character with the target letter (case-sensitively or not based on MatchCase flag), and increments a counter on matches.', 
+        code: `short CountLetter(string S1, char Letter, bool MatchCase = true)\n{\n    short Counter = 0;\n    for (short i = 0; i < S1.length(); i++)\n    {\n        if (MatchCase)\n        {\n            if (S1[i] == Letter)\n                Counter++;\n        }\n        else\n        {\n            if (tolower(S1[i]) == tolower(Letter))\n                Counter++;\n        }\n    }\n    return Counter;\n}`
+      }
+    ], 
+    keyConcepts: ['String Iteration', 'Character Comparison', 'Counters', 'Case Insensitivity', 'Optional Parameters']
+  },
+  { 
+    id: 9, 
+    title: 'Problem 9 — Check if a Character is a Vowel', 
+    description: 'Read a character and check if it is a vowel (a, e, i, o, u). The check should be case-insensitive.', 
+    example: 'A', 
+    generator: genIsVowelSteps, 
+    functions: [
+      { 
+        name: 'ReadChar()', 
+        signature: 'char ReadChar()', 
+        explanation: 'Reads a single character from the user.', 
+        code: `char ReadChar()\n{\n    char Ch1;\n    cout << "\\nPlease Enter a Character?\\n";\n    cin >> Ch1;\n    return Ch1;\n}`
+      },
+      { 
+        name: 'IsVowel(char Ch1)', 
+        signature: 'bool IsVowel(char Ch1)', 
+        explanation: 'Converts the character to lowercase and checks if it is one of \'a\', \'e\', \'i\', \'o\', or \'u\'.', 
+        code: `bool IsVowel(char Ch1)\n{\n    Ch1 = tolower(Ch1);\n    return ((Ch1 == 'a') || (Ch1 == 'e') || (Ch1 == 'i') || (Ch1 == 'o') || (Ch1 == 'u'));\n}`
+      }
+    ], 
+    keyConcepts: ['Character I/O', 'Boolean Logic', 'tolower()', 'Conditional Statements']
+  }
 ];
