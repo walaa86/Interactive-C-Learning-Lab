@@ -438,6 +438,113 @@ function genIsVowelSteps(str: string): Step[] {
   return steps;
 }
 
+function genCountVowelsSteps(str: string): Step[] {
+  const steps: Step[] = [];
+  let counter = 0;
+
+  steps.push({
+    i: -1,
+    code: 'short Counter = 0;',
+    explanation: 'Initialize vowel counter to 0.',
+    input: str,
+    modified: str,
+    mem: [`count=${counter}`]
+  });
+
+  for (let i = 0; i < str.length; i++) {
+    const ch = str[i];
+    const chLower = ch.toLowerCase();
+    const isVowel = ['a', 'e', 'i', 'o', 'u'].includes(chLower);
+
+    steps.push({
+      i,
+      code: `if (IsVowel(S1[${i}]))`,
+      explanation: `Checking character '${ch}'. IsVowel converts it to '${chLower}' and checks. Result: ${isVowel}.`,
+      input: str,
+      modified: str,
+      mem: [`count=${counter}`]
+    });
+
+    if (isVowel) {
+      counter++;
+      steps.push({
+        i,
+        code: `Counter++;`,
+        explanation: `It's a vowel! Incrementing counter.`,
+        input: str,
+        modified: str,
+        mem: [`count=${counter}`]
+      });
+    }
+  }
+
+  steps.push({
+    i: str.length,
+    code: 'return Counter;',
+    explanation: `Finished loop. The string has ${counter} vowel(s).`,
+    input: str,
+    modified: str,
+    mem: [`count=${counter}`],
+    output: [`Number of vowels is: ${counter}`]
+  });
+  return steps;
+}
+
+function genPrintVowelsSteps(str: string): Step[] {
+  const steps: Step[] = [];
+  let output: string[] = [];
+
+  steps.push({
+    i: -1,
+    code: 'cout << "Vowels in string are: ";',
+    explanation: 'Begin iterating through the string to find and print vowels.',
+    input: str,
+    modified: str,
+    output: [],
+    mem: ['Start loop']
+  });
+
+  for (let i = 0; i < str.length; i++) {
+    const ch = str[i];
+    const chLower = ch.toLowerCase();
+    const isVowel = ['a', 'e', 'i', 'o', 'u'].includes(chLower);
+
+    steps.push({
+      i,
+      code: `if (IsVowel(S1[${i}]))`,
+      explanation: `Checking character '${ch}'. IsVowel converts it to '${chLower}' and checks. Result: ${isVowel}.`,
+      input: str,
+      modified: str,
+      output: [...output],
+      mem: []
+    });
+
+    if (isVowel) {
+      output.push(ch);
+      steps.push({
+        i,
+        code: `cout << S1[i] << "   ";`,
+        explanation: `It's a vowel! Printing character '${ch}'.`,
+        input: str,
+        modified: str,
+        output: [...output],
+        mem: [`Printed '${ch}'`]
+      });
+    }
+  }
+
+  steps.push({
+    i: str.length,
+    code: 'cout << endl;',
+    explanation: `Finished loop. All vowels have been printed.`,
+    input: str,
+    modified: str,
+    output: [...output],
+    mem: [`Final vowels: ${output.join(', ')}`]
+  });
+  return steps;
+}
+
 
 export const problems: Problem[] = [
   { id: 1, title: 'Problem 1 — Print First Letter of Each Word', description: 'Read a string and print the first letter of every word.', example: 'programming is fun', generator: genPrintFirstLettersSteps, functions: [
@@ -524,5 +631,61 @@ export const problems: Problem[] = [
       }
     ], 
     keyConcepts: ['Character I/O', 'Boolean Logic', 'tolower()', 'Conditional Statements']
+  },
+  {
+    id: 10,
+    title: 'Problem 10 — Count Vowels in a String',
+    description: 'Read a string and count the total number of vowels (a, e, i, o, u) in it, case-insensitively.',
+    example: 'Programming Is Fun',
+    generator: genCountVowelsSteps,
+    functions: [
+      {
+        name: 'ReadString()',
+        signature: 'string ReadString()',
+        explanation: 'Reads a full line of text from the user.',
+        code: `string ReadString()\n{\n    string S1;\n    cout << "\\nPlease Enter Your String?\\n";\n    getline(cin, S1);\n    return S1;\n}`
+      },
+      {
+        name: 'IsVowel(char Ch1)',
+        signature: 'bool IsVowel(char Ch1)',
+        explanation: 'Converts the character to lowercase and checks if it is one of \'a\', \'e\', \'i\', \'o\', or \'u\'.',
+        code: `bool IsVowel(char Ch1)\n{\n    Ch1 = tolower(Ch1);\n    return ((Ch1 == 'a') || (Ch1 == 'e') || (Ch1 == 'i') || (Ch1 == 'o') || (Ch1 == 'u'));\n}`
+      },
+      {
+        name: 'CountVowels(string S1)',
+        signature: 'short CountVowels(string S1)',
+        explanation: 'Iterates through the string and uses the IsVowel helper function to count all vowels.',
+        code: `short CountVowels(string S1)\n{\n    short Counter = 0;\n    for (short i = 0; i < S1.length(); i++)\n    {\n        if (IsVowel(S1[i]))\n            Counter++;\n    }\n    return Counter;\n}`
+      }
+    ],
+    keyConcepts: ['String Iteration', 'Helper Functions', 'Boolean Logic', 'Case Insensitivity', 'tolower()']
+  },
+  {
+    id: 11,
+    title: 'Problem 11 — Print All Vowels in a String',
+    description: 'Read a string and print all the vowels (a, e, i, o, u) that appear in it, case-insensitively.',
+    example: 'Programming is Fun',
+    generator: genPrintVowelsSteps,
+    functions: [
+      {
+        name: 'ReadString()',
+        signature: 'string ReadString()',
+        explanation: 'Reads a full line of text from the user.',
+        code: `string ReadString()\n{\n    string S1;\n    cout << "\\nPlease Enter Your String?\\n";\n    getline(cin, S1);\n    return S1;\n}`
+      },
+      {
+        name: 'IsVowel(char Ch1)',
+        signature: 'bool IsVowel(char Ch1)',
+        explanation: 'Converts the character to lowercase and checks if it is one of \'a\', \'e\', \'i\', \'o\', or \'u\'.',
+        code: `bool IsVowel(char Ch1)\n{\n    Ch1 = tolower(Ch1);\n    return ((Ch1 == 'a') || (Ch1 == 'e') || (Ch1 == 'i') || (Ch1 == 'o') || (Ch1 == 'u'));\n}`
+      },
+      {
+        name: 'PrintVowels(string S1)',
+        signature: 'void PrintVowels(string S1)',
+        explanation: 'Iterates through the string and uses the IsVowel helper function to print each vowel found.',
+        code: `void PrintVowels(string S1)\n{\n    cout << "\\nVowels in string are: ";\n    for (short i = 0; i < S1.length(); i++)\n    {\n        if (IsVowel(S1[i]))\n            cout << S1[i] << "   ";\n    }\n}`
+      }
+    ],
+    keyConcepts: ['String Iteration', 'Helper Functions', 'Conditional Logic', 'Character Output', 'void Functions']
   }
 ];

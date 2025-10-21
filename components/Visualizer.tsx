@@ -121,6 +121,19 @@ const Visualizer: React.FC<VisualizerProps> = ({ problem }) => {
     cout << endl;
             `;
             break;
+        case 10:
+            mainBody = `
+    string S1 = ${readStringFn ? readStringFn.name + "();" : "/* Read string logic here */"}
+    cout << "\\nNumber of vowels is: " << CountVowels(S1) << endl;
+            `;
+            break;
+        case 11:
+            mainBody = `
+    string S1 = ${readStringFn ? readStringFn.name + "();" : "/* Read string logic here */"}
+    PrintVowels(S1);
+    cout << endl;
+            `;
+            break;
         default:
             mainBody = `    // TODO: Implement main execution logic for this problem.`;
     }
@@ -189,10 +202,11 @@ ${mainBody}
   };
 
   const isFirstLetterFlag = current.mem?.find(m => m.includes('isFirst'));
-  const isLoopProblem = problem.id <= 4 || problem.id === 6 || problem.id === 7 || problem.id === 8;
+  const isLoopProblem = problem.id <= 4 || problem.id === 6 || problem.id === 7 || problem.id === 8 || problem.id === 10 || problem.id === 11;
   const isCounterProblem = problem.id === 6;
   const isSpecificCounterProblem = problem.id === 7;
   const isCaseInsensitiveCounterProblem = problem.id === 8;
+  const isVowelCounterProblem = problem.id === 10;
 
   return (
     <div className="card">
@@ -388,6 +402,26 @@ ${mainBody}
                           </div>
                       </div>
                   );
+              })()}
+
+              {isVowelCounterProblem && (() => {
+                  let count = '0';
+                  if (current.mem) {
+                      const memString = current.mem.join('|');
+                      const countMatch = memString.match(/count=(\d+)/g);
+                      if (countMatch) count = countMatch[countMatch.length - 1].split('=')[1];
+                  }
+                  return (
+                      <div className="card">
+                          <div className="text-sm font-semibold mb-2">Live Vowel Counter</div>
+                          <div className="grid grid-cols-1 gap-2 text-center">
+                              <div>
+                                  <div className="text-xs text-gray-500">Vowels Found</div>
+                                  <div className="p-2 bg-rose-100 rounded mt-1 font-bold text-lg">{count}</div>
+                              </div>
+                          </div>
+                      </div>
+                  )
               })()}
               
               <div className="card">
