@@ -205,6 +205,62 @@ function genCountCaseSteps(str: string): Step[] {
   return steps;
 }
 
+function genCountLetterSteps(combinedStr: string): Step[] {
+  const [str, letterToCount] = combinedStr.includes('|') ? combinedStr.split('|') : [combinedStr, ''];
+  if (!letterToCount) {
+    return [{ i: -1, code: 'Error', explanation: 'Please provide a string and a character to count, separated by a pipe (|). E.g., "hello|l"', input: combinedStr, mem: [] }];
+  }
+  
+  const steps: Step[] = [];
+  let counter = 0;
+
+  steps.push({
+    i: -1,
+    code: 'short Counter = 0;',
+    explanation: `Initialize Counter to 0. Target character is '${letterToCount}'.`,
+    input: combinedStr,
+    modified: str,
+    mem: [`target='${letterToCount}'`, `count=${counter}`]
+  });
+
+  for (let i = 0; i < str.length; i++) {
+    const ch = str[i];
+    const match = ch === letterToCount;
+    
+    steps.push({
+      i,
+      code: `if (S1[${i}] == Letter)`,
+      explanation: `Checking if character '${ch}' at index ${i} matches target '${letterToCount}'. Match: ${match ? 'Yes' : 'No'}.`,
+      input: combinedStr,
+      modified: str,
+      mem: [`target='${letterToCount}'`, `count=${counter}`]
+    });
+    
+    if (match) {
+      counter++;
+      steps.push({
+        i,
+        code: `Counter++;`,
+        explanation: `Match found! Incrementing counter.`,
+        input: combinedStr,
+        modified: str,
+        mem: [`target='${letterToCount}'`, `count=${counter}`]
+      });
+    }
+  }
+
+  steps.push({
+    i: str.length,
+    code: 'return Counter;',
+    explanation: `Finished loop. The character '${letterToCount}' appeared ${counter} time(s).`,
+    input: combinedStr,
+    modified: str,
+    mem: [`target='${letterToCount}'`, `count=${counter}`],
+    output: [`Count for '${letterToCount}': ${counter}`]
+  });
+  return steps;
+}
+
 export const problems: Problem[] = [
   { id: 1, title: 'Problem 1 — Print First Letter of Each Word', description: 'Read a string and print the first letter of every word.', example: 'programming is fun', generator: genPrintFirstLettersSteps, functions: [
     {name: 'ReadString()', signature: 'string ReadString()', explanation: 'Reads a full line including spaces.', code: `string ReadString()\n{\n    string S1;\n    getline(cin, S1);\n    return S1;\n}`},
@@ -229,5 +285,10 @@ export const problems: Problem[] = [
     { name: 'ReadString()', signature: 'string ReadString()', explanation: 'Reads a full line including spaces.', code: `string ReadString()\n{\n    string S1;\n    cout << "Please Enter Your String?\\n";\n    getline(cin, S1);\n    return S1;\n}` },
     { name: 'CountCapitalLetters(string S1)', signature: 'short CountCapitalLetters(string S1)', explanation: 'Iterates through the string and increments a counter for each uppercase character found.', code: `short CountCapitalLetters(string S1)\n{\n    short Counter = 0;\n    for (short i = 0; i < S1.length(); i++)\n    {\n        if (isupper(S1[i]))\n            Counter++;\n    }\n    return Counter;\n}` },
     { name: 'CountSmallLetters(string S1)', signature: 'short CountSmallLetters(string S1)', explanation: 'Iterates through the string and increments a counter for each lowercase character found.', code: `short CountSmallLetters(string S1)\n{\n    short Counter = 0;\n    for (short i = 0; i < S1.length(); i++)\n    {\n        if (islower(S1[i]))\n            Counter++;\n    }\n    return Counter;\n}` }
-  ], keyConcepts: ['String Iteration', 'Counters', 'isupper()', 'islower()', 'Conditional Logic'] }
+  ], keyConcepts: ['String Iteration', 'Counters', 'isupper()', 'islower()', 'Conditional Logic'] },
+  { id: 7, title: 'Problem 7 — Count a Specific Letter', description: 'Read a string and a character, then count how many times that character appears. Separate string and character with a pipe (|).', example: 'programming is fun|g', generator: genCountLetterSteps, functions: [
+    { name: 'ReadString()', signature: 'string ReadString()', explanation: 'Reads a full line of text from the user.', code: `string ReadString()\n{\n    string S1;\n    cout << "\\nPlease Enter Your String?\\n";\n    getline(cin, S1);\n    return S1;\n}`},
+    { name: 'ReadChar()', signature: 'char ReadChar()', explanation: 'Reads a single character from the user.', code: `char ReadChar()\n{\n    char Ch1;\n    cout << "\\nPlease Enter a Character?\\n";\n    cin >> Ch1;\n    return Ch1;\n}`},
+    { name: 'CountLetter(string S1, char Letter)', signature: 'short CountLetter(string S1, char Letter)', explanation: 'Iterates through the string, compares each character with the target letter, and increments a counter on matches.', code: `short CountLetter(string S1, char Letter)\n{\n    short Counter = 0;\n    for (short i = 0; i < S1.length(); i++)\n    {\n        if (S1[i] == Letter)\n            Counter++;\n    }\n    return Counter;\n}`}
+  ], keyConcepts: ['String Iteration', 'Character Comparison', 'Counters', 'Function Parameters']}
 ];

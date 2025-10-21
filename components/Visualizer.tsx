@@ -32,7 +32,9 @@ const Visualizer: React.FC<VisualizerProps> = ({ problem }) => {
   }, [input, problem]);
 
   const current = steps[pos] || steps[0];
-  const charList = (input || '').split('');
+  const stringPart = problem.id === 7 && input.includes('|') ? input.split('|')[0] : input;
+  const charList = (stringPart || '').split('');
+
 
   const generateCppCode = (): string => {
     const headers = new Set<string>(['iostream']);
@@ -88,6 +90,13 @@ const Visualizer: React.FC<VisualizerProps> = ({ problem }) => {
     string s = ${readStringFn ? readStringFn.name + "();" : "/* Read string logic here */"}
     cout << "\\nCapital Letters Count = " << CountCapitalLetters(s) << endl;
     cout << "Small Letters Count = " << CountSmallLetters(s) << endl;
+            `;
+            break;
+        case 7:
+            mainBody = `
+    string s = ${readStringFn ? readStringFn.name + "();" : "/* Read string logic here */"}
+    char c = ${readCharFn ? readCharFn.name + "();" : "/* Read char logic here */"}
+    cout << "\\nLetter '" << c << "' Count = " << CountLetter(s, c) << endl;
             `;
             break;
         default:
@@ -158,8 +167,9 @@ ${mainBody}
   };
 
   const isFirstLetterFlag = current.mem?.find(m => m.includes('isFirst'));
-  const isLoopProblem = problem.id <= 4 || problem.id === 6;
+  const isLoopProblem = problem.id <= 4 || problem.id === 6 || problem.id === 7;
   const isCounterProblem = problem.id === 6;
+  const isSpecificCounterProblem = problem.id === 7;
 
   return (
     <div className="card">
@@ -278,6 +288,33 @@ ${mainBody}
                               <div>
                                   <div className="text-xs text-gray-500">Small</div>
                                   <div className="p-2 bg-green-100 rounded mt-1 font-bold text-lg">{smallCount}</div>
+                              </div>
+                          </div>
+                      </div>
+                  )
+              })()}
+
+              {isSpecificCounterProblem && (() => {
+                  let targetChar = '?';
+                  let count = '0';
+                  if (current.mem) {
+                      const memString = current.mem.join('|');
+                      const targetMatch = memString.match(/target='(.*?)'/);
+                      const countMatch = memString.match(/count=(\d+)/g);
+                      if (targetMatch) targetChar = targetMatch[1];
+                      if (countMatch) count = countMatch[countMatch.length - 1].split('=')[1];
+                  }
+                  return (
+                      <div className="card">
+                          <div className="text-sm font-semibold mb-2">Live Trace</div>
+                          <div className="grid grid-cols-2 gap-2 text-center">
+                              <div>
+                                  <div className="text-xs text-gray-500">Target Char</div>
+                                  <div className="p-2 bg-purple-100 rounded mt-1 font-bold text-lg">{targetChar}</div>
+                              </div>
+                              <div>
+                                  <div className="text-xs text-gray-500">Count</div>
+                                  <div className="p-2 bg-green-100 rounded mt-1 font-bold text-lg">{count}</div>
                               </div>
                           </div>
                       </div>
