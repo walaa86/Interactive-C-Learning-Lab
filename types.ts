@@ -13,7 +13,8 @@ export interface Step {
   output?: string[];
   modified?: string;
   mem: string[];
-  phase?: 'upper' | 'lower' | 'read' | 'invert' | 'print' | 'sensitive' | 'insensitive' | 'convert' | 'check' | 'result';
+  // FIX: Added 'left', 'right', and 'all' to the allowed phase types to support the Trim problem visualization.
+  phase?: 'upper' | 'lower' | 'read' | 'invert' | 'print' | 'sensitive' | 'insensitive' | 'convert' | 'check' | 'result' | 'left' | 'right' | 'all';
 }
 
 export interface Problem {

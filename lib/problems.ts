@@ -883,6 +883,160 @@ function genSplitStringSteps(str: string): Step[] {
   return steps;
 }
 
+function genTrimSteps(str: string): Step[] {
+  const steps: Step[] = [];
+  let output: string[] = [];
+
+  // --- Phase: TrimLeft ---
+  steps.push({
+    i: -1,
+    phase: 'left',
+    code: 'cout << TrimLeft(S1);',
+    explanation: 'Start TrimLeft: Find the first non-space character from the beginning.',
+    input: str,
+    modified: str,
+    mem: ['Executing TrimLeft...']
+  });
+
+  let firstNonSpaceLeft = -1;
+  for (let i = 0; i < str.length; i++) {
+    const ch = str[i];
+    steps.push({
+      i,
+      phase: 'left',
+      code: `if (S1[${i}] != ' ')`,
+      explanation: `Checking character at index ${i}. Is '${ch === ' ' ? 'space' : ch}' not a space? ${ch !== ' '}`,
+      input: str,
+      modified: str,
+      mem: [`Checking S1[${i}]`]
+    });
+    if (ch !== ' ') {
+      firstNonSpaceLeft = i;
+      steps.push({
+        i,
+        phase: 'left',
+        code: `return S1.substr(${i}, ...);`,
+        explanation: `Condition met. First non-space is at index ${i}. Loop terminates.`,
+        input: str,
+        modified: str,
+        mem: [`Found first non-space at index ${i}`]
+      });
+      break;
+    }
+  }
+
+  const trimmedLeft = (firstNonSpaceLeft !== -1) ? str.substring(firstNonSpaceLeft) : "";
+  output.push(`Trim Left = ${trimmedLeft}`);
+  steps.push({
+    i: firstNonSpaceLeft,
+    phase: 'left',
+    code: `return S1.substr(${firstNonSpaceLeft}, S1.length() - ${firstNonSpaceLeft});`,
+    explanation: firstNonSpaceLeft !== -1 ? `Returning substring from index ${firstNonSpaceLeft} to the end.` : 'No non-space characters found. Returning empty string.',
+    input: str,
+    modified: trimmedLeft,
+    output: [...output],
+    mem: [`Result of TrimLeft: "${trimmedLeft}"`]
+  });
+
+  // --- Phase: TrimRight ---
+  steps.push({
+    i: str.length,
+    phase: 'right',
+    code: 'cout << TrimRight(S1);',
+    explanation: 'Start TrimRight: Find the first non-space character from the end.',
+    input: str,
+    modified: str,
+    mem: ['Executing TrimRight...']
+  });
+
+  let lastNonSpaceRight = -1;
+  for (let i = str.length - 1; i >= 0; i--) {
+    const ch = str[i];
+    steps.push({
+      i,
+      phase: 'right',
+      code: `if (S1[${i}] != ' ')`,
+      explanation: `Checking character at index ${i} (from right). Is '${ch === ' ' ? 'space' : ch}' not a space? ${ch !== ' '}`,
+      input: str,
+      modified: str,
+      mem: [`Checking S1[${i}]`]
+    });
+    if (ch !== ' ') {
+      lastNonSpaceRight = i;
+      steps.push({
+        i,
+        phase: 'right',
+        code: `return S1.substr(0, ${i + 1});`,
+        explanation: `Condition met. Last non-space is at index ${i}. Loop terminates.`,
+        input: str,
+        modified: str,
+        mem: [`Found last non-space at index ${i}`]
+      });
+      break;
+    }
+  }
+
+  const trimmedRight = (lastNonSpaceRight !== -1) ? str.substring(0, lastNonSpaceRight + 1) : "";
+  output.push(`Trim Right = ${trimmedRight}`);
+  steps.push({
+    i: lastNonSpaceRight,
+    phase: 'right',
+    code: `return S1.substr(0, ${lastNonSpaceRight + 1});`,
+    explanation: lastNonSpaceRight !== -1 ? `Returning substring from index 0 to ${lastNonSpaceRight}.` : 'No non-space characters found. Returning empty string.',
+    input: str,
+    modified: trimmedRight,
+    output: [...output],
+    mem: [`Result of TrimRight: "${trimmedRight}"`]
+  });
+
+  // --- Phase: Trim (All) ---
+  steps.push({
+    i: -1,
+    phase: 'all',
+    code: 'cout << Trim(S1);',
+    explanation: 'Start Trim: This function composes TrimLeft and TrimRight.',
+    input: str,
+    modified: str,
+    mem: ['Executing Trim(S1)...']
+  });
+  
+  steps.push({
+    i: -1,
+    phase: 'all',
+    code: 'TrimRight(S1)',
+    explanation: `First, Trim calls TrimRight on the original string. The result is "${trimmedRight}".`,
+    input: str,
+    modified: trimmedRight,
+    mem: [`Intermediate result: "${trimmedRight}"`]
+  });
+
+  const finalTrimmed = trimmedRight.trimStart();
+  output.push(`Trim = ${finalTrimmed}`);
+  steps.push({
+    i: -1,
+    phase: 'all',
+    code: 'TrimLeft(...)',
+    explanation: `Then, TrimLeft is called on that intermediate result ("${trimmedRight}").`,
+    input: str,
+    modified: finalTrimmed,
+    output: [...output],
+    mem: [`Final Result: "${finalTrimmed}"`]
+  });
+
+  steps.push({
+    i: str.length,
+    code: 'return 0;',
+    explanation: 'Program finished.',
+    input: str,
+    modified: finalTrimmed,
+    output: [...output],
+    mem: ['Done']
+  });
+
+  return steps;
+}
+
+
 export const problems: Problem[] = [
   { id: 1, title: 'Problem 1 — Print First Letter of Each Word', description: 'Read a string and print the first letter of every word.', example: 'programming is fun', generator: genPrintFirstLettersSteps, functions: [
     {name: 'ReadString()', signature: 'string ReadString()', explanation: 'Reads a full line including spaces.', code: `string ReadString()\n{\n    string S1;\n    getline(cin, S1);\n    return S1;\n}`},
@@ -1090,5 +1244,33 @@ export const problems: Problem[] = [
       }
     ],
     keyConcepts: ['std::vector', 'vector::push_back', 'String Tokenizing', 'find()', 'substr()', 'erase()']
+  },
+  {
+    id: 15,
+    title: 'Problem 15 — Trim Left, Right, and All',
+    description: 'Read a string and demonstrate trimming leading spaces, trailing spaces, and both.',
+    example: '     Mohammed Abu-Hahdoud     ',
+    generator: genTrimSteps,
+    functions: [
+        {
+            name: 'TrimLeft(string S1)',
+            signature: 'string TrimLeft(string S1)',
+            explanation: 'Iterates from the left of the string, finds the first non-space character, and returns the substring from that point to the end.',
+            code: `string TrimLeft(string S1)\n{\n    for (short i = 0; i < S1.length(); i++)\n    {\n        if (S1[i] != ' ')\n        {\n            return S1.substr(i, S1.length() - i);\n        }\n    }\n    return "";\n}`
+        },
+        {
+            name: 'TrimRight(string S1)',
+            signature: 'string TrimRight(string S1)',
+            explanation: 'Iterates from the right of the string, finds the first non-space character, and returns the substring from the beginning to that point.',
+            code: `string TrimRight(string S1)\n{\n    for (short i = S1.length() - 1; i >= 0; i--)\n    {\n        if (S1[i] != ' ')\n        {\n            return S1.substr(0, i + 1);\n        }\n    }\n    return "";\n}`
+        },
+        {
+            name: 'Trim(string S1)',
+            signature: 'string Trim(string S1)',
+            explanation: 'A composite function that first calls TrimRight and then calls TrimLeft on the result to remove both leading and trailing spaces.',
+            code: `string Trim(string S1)\n{\n    return (TrimLeft(TrimRight(S1)));\n}`
+        }
+    ],
+    keyConcepts: ['String Iteration', 'substr()', 'Function Composition', 'Whitespace Handling']
   }
 ];

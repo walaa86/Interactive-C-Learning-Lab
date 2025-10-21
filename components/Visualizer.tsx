@@ -161,6 +161,16 @@ const Visualizer: React.FC<VisualizerProps> = ({ problem }) => {
     }
             `;
             break;
+        case 15:
+            mainBody = `
+    string S1 = "${problem.example}";
+    
+    cout << "\\nString     = " << S1;
+    cout << "\\n\\nTrim Left  = " << TrimLeft(S1);
+    cout << "\\nTrim Right = " << TrimRight(S1);
+    cout << "\\nTrim       = " << Trim(S1) << endl;
+            `;
+            break;
         default:
             mainBody = `    // TODO: Implement main execution logic for this problem.`;
     }
@@ -236,6 +246,7 @@ ${mainBody}
   const isVowelCounterProblem = problem.id === 10;
   const isWordCounterProblem = problem.id === 13;
   const isVectorProblem = problem.id === 14;
+  const isTrimProblem = problem.id === 15;
 
   return (
     <div className="card">
@@ -288,7 +299,7 @@ ${mainBody}
                   </div>
                 ) : (
                   <div className="p-3 border rounded bg-white flex items-center justify-center min-h-[96px]">
-                    <div className="text-2xl font-bold mono p-4">{[12, 13, 14].includes(problem.id) ? input : (charList[0] || '')}</div>
+                    <div className="text-2xl font-bold mono p-4">{[12, 13, 14, 15].includes(problem.id) ? input : (charList[0] || '')}</div>
                   </div>
                 )}
             </div>
@@ -325,6 +336,23 @@ ${mainBody}
                 <div className="text-xs text-gray-500 mb-2">{isIndexedLoopProblem ? 'Loop Variable: i' : 'Execution Step'}</div>
                 <div className="p-4 bg-sky-100 rounded text-center mono font-bold text-xl">{current.i === undefined || current.i < 0 ? 'START' : current.i}</div>
               </div>
+
+              {isTrimProblem && (() => {
+                  const phaseMap: {[key: string]: string} = {
+                      left: 'Trim Left',
+                      right: 'Trim Right',
+                      all: 'Trim All'
+                  };
+                  const currentPhase = current.phase || 'left';
+                  return (
+                      <div className="card">
+                          <div className="text-sm font-semibold mb-2">Current Operation</div>
+                          <div className="p-3 bg-indigo-100 rounded text-center font-bold text-lg">
+                              {phaseMap[currentPhase]}
+                          </div>
+                      </div>
+                  );
+              })()}
 
               {isFirstLetterFlag && (
                 <div className="card">
