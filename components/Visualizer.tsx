@@ -47,6 +47,9 @@ const Visualizer: React.FC<VisualizerProps> = ({ problem }) => {
      if (problem.functions.some(f => f.signature.includes('fstream') || f.code.includes('fstream'))) {
       headers.add('fstream');
     }
+    if (problem.functions.some(f => f.code.includes('setw'))) {
+      headers.add('iomanip');
+    }
 
     const headerIncludes = Array.from(headers).map(h => `#include <${h}>`).join('\n');
     const functionDefinitions = problem.functions.map(f => f.code).join('\n\n');
@@ -251,7 +254,46 @@ const Visualizer: React.FC<VisualizerProps> = ({ problem }) => {
             break;
         case 23:
             mainBody = `
+    const string ClientsFileName = "Clients.txt";
     AddClients();
+            `;
+            break;
+        case 24:
+            mainBody = `
+    const string ClientsFileName = "Clients.txt";
+    // NOTE: This program assumes Clients.txt exists and has data.
+    // You may need to run Problem 23 first to create the file.
+    
+    vector<sClient> vClients = LoadCleintsDataFromFile(ClientsFileName);
+    
+    PrintAllClientsData(vClients);
+            `;
+            break;
+        case 25:
+            mainBody = `
+    const string ClientsFileName = "Clients.txt";
+    sClient Client;
+    string AccountNumber = ReadClientAccountNumber();
+    
+    if (FindClientByAccountNumber(AccountNumber, Client))
+    {
+        PrintClientCard(Client);
+    }
+    else
+    {
+        cout << "\\nClient with Account Number (" << AccountNumber << ") is Not Found!";
+    }
+    cout << endl;
+            `;
+            break;
+        case 26:
+             mainBody = `
+    const string ClientsFileName = "Clients.txt";
+    vector<sClient> vClients = LoadCleintsDataFromFile(ClientsFileName);
+    string AccountNumber = ReadClientAccountNumber();
+    
+    DeleteClientByAccountNumber(AccountNumber, vClients);
+    cout << endl;
             `;
             break;
         default:
@@ -328,7 +370,7 @@ ${mainBody}
   const isCaseInsensitiveCounterProblem = problem.id === 8;
   const isVowelCounterProblem = problem.id === 10;
   const isWordCounterProblem = problem.id === 13;
-  const isVectorProblem = problem.id === 14;
+  const isVectorProblem = [14, 22, 24, 25, 26].includes(problem.id);
   const isTrimProblem = problem.id === 15;
   const isJoinProblem = problem.id === 16;
   const isJoinOverloadProblem = problem.id === 17;
@@ -337,7 +379,11 @@ ${mainBody}
   const isStructToLineProblem = problem.id === 21;
   const isLineToStructProblem = problem.id === 22;
   const isAddClientsProblem = problem.id === 23;
-
+  const isLoadClientsProblem = problem.id === 24;
+  const isFindClientProblem = problem.id === 25;
+  const isDeleteClientProblem = problem.id === 26;
+  
+  const isFileBasedProblem = [23, 24, 25, 26].includes(problem.id);
 
   const fixedClientData = {
     AccountNumber: "A1234",
@@ -362,12 +408,12 @@ ${mainBody}
             </button>
         </div>
         <div className="mb-3">
-          <label className="text-xs font-medium">{isStructToLineProblem ? 'Separator:' : [16, 17].includes(problem.id) ? 'Delimiter Input:' : isReplaceWordProblem ? 'Input (String|Find|Replace):' : 'Input:'}</label>
+          <label className="text-xs font-medium">{isStructToLineProblem ? 'Separator:' : [16, 17].includes(problem.id) ? 'Delimiter Input:' : isReplaceWordProblem ? 'Input (String|Find|Replace):' : (isFindClientProblem || isDeleteClientProblem) ? 'Account Number to Find/Delete:' : 'Input:'}</label>
           <input 
             value={input} 
             onChange={e => setInput((problem.id === 5 || problem.id === 9) ? e.target.value.slice(0, 1) : e.target.value)} 
             className="w-full mt-2 p-3 rounded text-lg mono bg-sky-50 border-2 border-cyan-300 focus:border-teal-500 focus:ring focus:ring-teal-200 focus:ring-opacity-50 transition-colors duration-200 ease-in-out"
-            disabled={isAddClientsProblem}
+            disabled={isAddClientsProblem || isLoadClientsProblem}
           />
           <div className="text-xs text-gray-500 mt-2">{isStructToLineProblem ? 'This separator is used to join the struct fields. The client data is fixed for this visualization.' : [16, 17].includes(problem.id) ? `Try: "--" or ", "` : `Try: ${problem.example}`}</div>
         </div>
@@ -384,7 +430,7 @@ ${mainBody}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div className="lg:col-span-2">
             <div className="mb-4">
-              <div className="text-sm font-semibold mb-2">{isJoinProblem || isJoinOverloadProblem ? 'Input Collections (Fixed)' : isStructToLineProblem ? 'Client Data (Fixed sClient Struct)' : isAddClientsProblem ? 'Simulation Status' : 'Original Input (Read-Only)'}</div>
+              <div className="text-sm font-semibold mb-2">{isJoinProblem || isJoinOverloadProblem ? 'Input Collections (Fixed)' : isStructToLineProblem ? 'Client Data (Fixed sClient Struct)' : isFileBasedProblem ? 'Simulation Status' : 'Original Input (Read-Only)'}</div>
                {isIndexedLoopProblem ? (
                   <div className="p-3 border rounded bg-white overflow-x-auto">
                     <table className="w-full border-collapse">
@@ -455,7 +501,7 @@ ${mainBody}
                     </div>
                 ) : (
                   <div className="p-3 border rounded bg-white flex items-center justify-center min-h-[96px]">
-                    <div className="text-2xl font-bold mono p-4">{[12, 13, 14, 15, 18, 19, 20, 22].includes(problem.id) ? (problem.id === 19 ? input.split('|')[0] : input) : (charList[0] || '')}</div>
+                    <div className="text-2xl font-bold mono p-4">{[12, 13, 14, 15, 18, 19, 20, 22, 25, 26].includes(problem.id) ? (problem.id === 19 ? input.split('|')[0] : input) : (charList[0] || '')}</div>
                   </div>
                 )}
             </div>
@@ -471,11 +517,11 @@ ${mainBody}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <div className="text-xs text-gray-500 mb-1">Modified</div>
-                  <div className="p-3 bg-slate-100 rounded mono min-h-[44px] break-all">{current.modified ?? ((isStructToLineProblem || isLineToStructProblem || isAddClientsProblem) ? '' : input)}</div>
+                  <div className="p-3 bg-slate-100 rounded mono min-h-[44px] break-all">{current.modified ?? ((isStructToLineProblem || isLineToStructProblem || isFileBasedProblem) ? '' : input)}</div>
                 </div>
                 <div>
                   <div className="text-xs text-gray-500 mb-1">Output / Collected</div>
-                  <div className="p-3 bg-slate-100 rounded mono min-h-[44px]">{current.output ? (current.output.length ? current.output.join('\n') : '<empty>') : '<none>'}</div>
+                  <div className="p-3 bg-slate-100 rounded mono min-h-[44px] whitespace-pre-wrap">{current.output ? (current.output.length ? current.output.join('') : '<empty>') : '<none>'}</div>
                 </div>
               </div>
             </div>
@@ -493,9 +539,9 @@ ${mainBody}
                 <div className="p-4 bg-sky-100 rounded text-center mono font-bold text-xl">{current.i === undefined || current.i < 0 ? 'START' : current.i}</div>
               </div>
 
-              {isAddClientsProblem && current.loop && (
+              {(isAddClientsProblem || isLoadClientsProblem) && current.loop && (
                   <div className="card">
-                      <div className="text-sm font-semibold mb-2">Do-While Loop Status</div>
+                      <div className="text-sm font-semibold mb-2">{isAddClientsProblem ? 'Do-While Loop Status' : 'File Read Loop Status'}</div>
                       <div className="grid grid-cols-2 gap-2 text-center">
                             <div>
                                 <div className="text-xs text-gray-500">Iteration</div>
@@ -508,22 +554,72 @@ ${mainBody}
                       </div>
                   </div>
               )}
+              
+              {isDeleteClientProblem && (() => {
+                const deleteState = current.delete || { target: input, found: false, confirmed: null };
+                const phaseMap: {[key: string]: string} = {
+                    read_account_number: 'Read Input', load_vector: 'Load Vector', find_client: 'Finding Client',
+                    confirm_delete: 'Awaiting Confirmation', mark_for_delete: 'Marking for Delete',
+                    save_to_file: 'Saving to File', reload_vector: 'Reloading Vector', print_result: 'Printing Result'
+                };
+                return (
+                  <div className="card">
+                    <div className="text-sm font-semibold mb-2">Delete Operation</div>
+                    <div className="space-y-2">
+                        <div>
+                            <div className="text-xs text-gray-500">Phase</div>
+                            <div className="p-2 bg-indigo-100 rounded mt-1 font-bold text-base text-center">{phaseMap[current.phase || ''] || 'N/A'}</div>
+                        </div>
+                        <div>
+                            <div className="text-xs text-gray-500">Target Account #</div>
+                            <div className="p-2 bg-purple-100 rounded mt-1 font-bold text-base mono">"{deleteState.target}"</div>
+                        </div>
+                        <div>
+                            <div className="text-xs text-gray-500">Found?</div>
+                            <div className={`p-2 rounded mt-1 font-bold text-base ${deleteState.found ? 'bg-green-100' : 'bg-red-100'}`}>{deleteState.found ? 'Yes ✓' : 'No ✗'}</div>
+                        </div>
+                         <div>
+                            <div className="text-xs text-gray-500">Confirmed?</div>
+                            <div className={`p-2 rounded mt-1 font-bold text-base ${deleteState.confirmed === null ? 'bg-gray-100' : (deleteState.confirmed ? 'bg-green-100' : 'bg-red-100')}`}>{deleteState.confirmed === null ? 'N/A' : (deleteState.confirmed ? 'Yes ✓' : 'No ✗')}</div>
+                        </div>
+                    </div>
+                  </div>
+                )
+              })()}
 
-              {(isTrimProblem || isJoinOverloadProblem || isReverseWordsProblem || isLineToStructProblem || isAddClientsProblem) && (() => {
+
+              {isFindClientProblem && (() => {
+                const searchState = current.search || { target: input, currentIndex: -1, found: false };
+                return (
+                  <div className="card">
+                    <div className="text-sm font-semibold mb-2">Search Status</div>
+                    <div className="space-y-2">
+                      <div>
+                        <div className="text-xs text-gray-500">Target Account #</div>
+                        <div className="p-2 bg-purple-100 rounded mt-1 font-bold text-base mono">"{searchState.target}"</div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-gray-500">Checking Index</div>
+                        <div className="p-2 bg-sky-100 rounded mt-1 font-bold text-base mono">{searchState.currentIndex < 0 ? 'N/A' : searchState.currentIndex}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-gray-500">Found?</div>
+                        <div className={`p-2 rounded mt-1 font-bold text-base ${searchState.found ? 'bg-green-100' : 'bg-red-100'}`}>{searchState.found ? 'Yes ✓' : 'No ✗'}</div>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })()}
+
+              {(isTrimProblem || isJoinOverloadProblem || isReverseWordsProblem || isLineToStructProblem || isAddClientsProblem || isLoadClientsProblem || isFindClientProblem) && !isDeleteClientProblem && (() => {
                   const phaseMap: {[key: string]: string} = {
-                      left: 'Trim Left',
-                      right: 'Trim Right',
-                      all: 'Trim All',
-                      vector: 'Vector Join',
-                      array: 'Array Join',
-                      split: 'Splitting String',
-                      reverse: 'Reversing Words',
-                      assign: 'Assigning to Struct',
-                      print: 'Printing Record',
-                      read_client: 'Reading Data',
-                      convert_client: 'Converting to Line',
-                      save_client: 'Saving to File',
-                      loop_check: 'Loop Check',
+                      left: 'Trim Left', right: 'Trim Right', all: 'Trim All', vector: 'Vector Join',
+                      array: 'Array Join', split: 'Splitting String', reverse: 'Reversing Words',
+                      assign: 'Assigning to Struct', print: 'Printing Record', read_client: 'Reading Data',
+                      convert_client: 'Converting to Line', save_client: 'Saving to File',
+                      loop_check: 'Loop Check', load_file: 'Loading File', parse_line: 'Parsing Line',
+                      add_to_vector: 'Add to Vector', print_table: 'Printing Table', read_account_number: 'Read Input',
+                      load_vector: 'Load Vector', search_vector: 'Searching Vector', print_result: 'Print Result',
                   };
                   const currentPhase = current.phase || (isTrimProblem ? 'left' : (isJoinOverloadProblem ? 'vector' : (isReverseWordsProblem || isLineToStructProblem ? 'split' : '')));
                   return (
@@ -583,12 +679,12 @@ ${mainBody}
                   );
               })()}
 
-              {isAddClientsProblem && (
+              {isFileBasedProblem && current.phase !== 'read_account_number' && (
                 <div className="card">
                   <div className="text-sm font-semibold mb-2">Live File View (`Clients.txt`)</div>
                    <div className="paper text-sm mono" style={{ minHeight: 100, maxHeight: 200, overflowY: 'auto' }}>
                      {current.fileContents && current.fileContents.length > 0 ? current.fileContents.map((line, idx) => (
-                       <div key={idx} className="whitespace-pre-wrap break-all">{line}</div>
+                       <div key={idx} className={`whitespace-pre-wrap break-all p-1 rounded ${current.loop?.currentLine === idx ? 'bg-yellow-300' : ''}`}>{line}</div>
                      )) : <div className="text-gray-500 italic text-xs">File is empty.</div>}
                    </div>
                 </div>
@@ -772,9 +868,11 @@ ${mainBody}
                   )
               })()}
 
-              {(isVectorProblem || isReverseWordsProblem || isLineToStructProblem) && (() => {
-                  let vectorItems: string[] = [];
-                  if (current.mem) {
+              {isVectorProblem && (() => {
+                  let vectorItems: any[] = [];
+                  if (isFileBasedProblem) {
+                      vectorItems = current.vectorContents || [];
+                  } else if (current.mem) {
                       const memString = current.mem.join('|');
                       const vecMatch = memString.match(/vString=\[(.*?)\]/);
                       if (vecMatch && vecMatch[1]) {
@@ -785,12 +883,23 @@ ${mainBody}
                   }
                   return (
                       <div className="card">
-                          <div className="text-sm font-semibold mb-2">Live Vector</div>
+                          <div className="text-sm font-semibold mb-2">Live Vector {isFileBasedProblem ? `(vClients)`: ''}</div>
                           <div className="paper text-sm space-y-1 p-2" style={{minHeight: 100, maxHeight: 200, overflowY: 'auto'}}>
                               {vectorItems.length > 0 ? vectorItems.map((item, index) => (
-                                  <div key={index} className={`flex items-center gap-2 p-1 rounded transition-colors ${((isReverseWordsProblem && current.phase === 'reverse') || (isLineToStructProblem && current.phase === 'assign')) && current.i === index ? 'bg-yellow-300' : ''}`}>
+                                  <div key={index} className={`flex items-center gap-2 p-1 rounded transition-colors ${
+                                      (isReverseWordsProblem && current.phase === 'reverse' && current.i === index) ||
+                                      (isLineToStructProblem && current.phase === 'assign' && current.i === index) ||
+                                      (isFindClientProblem && current.phase === 'search_vector' && current.search?.currentIndex === index) ||
+                                      (isDeleteClientProblem && (current.phase === 'find_client' || current.phase === 'mark_for_delete' || current.phase === 'save_to_file') && current.i === index)
+                                      ? 'bg-yellow-300' : ''
+                                  }`}>
                                       <span className="text-xs text-gray-500 w-4">{index}:</span>
-                                      <span className="p-1 bg-sky-100 rounded text-xs mono w-full">"{item}"</span>
+                                      <span className="p-1 bg-sky-100 rounded text-xs mono w-full flex justify-between items-center">
+                                          <span>{typeof item === 'object' ? `{${item.AccountNumber}, ${item.Name}}` : `"${item}"`}</span>
+                                          {isDeleteClientProblem && typeof item === 'object' && item.MarkForDelete && (
+                                              <span className="text-xs font-bold text-red-600 bg-red-100 px-1.5 py-0.5 rounded-full">DELETED</span>
+                                          )}
+                                      </span>
                                   </div>
                               )) : <div className="text-gray-500 italic text-xs">Vector is empty.</div>}
                           </div>

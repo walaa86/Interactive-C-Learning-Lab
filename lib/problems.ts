@@ -1832,6 +1832,574 @@ function genAddClientsToFileSteps(str: string): Step[] {
   return steps;
 }
 
+function genLoadClientsFromFileSteps(str: string): Step[] {
+    const steps: Step[] = [];
+    let stepCounter = 0;
+    const fileContents = [
+        "A101#//#1111#//#John Smith#//#555-0101#//#4500.5",
+        "A102#//#2222#//#Jane Doe#//#555-0102#//#8250",
+        "A123#//#5678#//#Mohammed Abu-Hadhoud#//#079000000#//#5124.88"
+    ];
+    const separator = "#//#";
+    let vClients: any[] = [];
+    let output: string[] = [];
+
+    // --- Phase 1: Load File ---
+    steps.push({
+        i: stepCounter++,
+        phase: 'load_file',
+        code: `vector<sClient> vClients = LoadCleintsDataFromFile(ClientsFileName);`,
+        explanation: `Calling function to load all client records from "Clients.txt".`,
+        input: str,
+        fileContents: [...fileContents],
+        vectorContents: [...vClients],
+        mem: [`Starting file load process`],
+    });
+
+    fileContents.forEach((line, index) => {
+        steps.push({
+            i: stepCounter++,
+            phase: 'load_file',
+            loop: { iteration: index + 1, continue: true, currentLine: index },
+            code: `while (getline(MyFile, Line))`,
+            explanation: `Reading line ${index + 1} from the file.`,
+            input: str,
+            modified: line,
+            fileContents: [...fileContents],
+            vectorContents: [...vClients],
+            mem: [`Reading line ${index + 1}`],
+        });
+
+        // --- Phase 2: Parse Line ---
+        const vClientData = line.split(separator);
+        const client: any = {
+            AccountNumber: vClientData[0],
+            PinCode: vClientData[1],
+            Name: vClientData[2],
+            Phone: vClientData[3],
+            AccountBalance: parseFloat(vClientData[4])
+        };
+        steps.push({
+            i: stepCounter++,
+            phase: 'parse_line',
+            loop: { iteration: index + 1, continue: true, currentLine: index },
+            code: `Client = ConvertLinetoRecord(Line);`,
+            explanation: `Parsing the line into a temporary sClient struct.`,
+            input: str,
+            modified: line,
+            fileContents: [...fileContents],
+            vectorContents: [...vClients],
+            mem: ['Parsing current line into struct'],
+        });
+
+        // --- Phase 3: Add to Vector ---
+        vClients.push(client);
+        steps.push({
+            i: stepCounter++,
+            phase: 'add_to_vector',
+            loop: { iteration: index + 1, continue: true, currentLine: index },
+            code: `vClients.push_back(Client);`,
+            explanation: `Adding the newly parsed client struct for "${client.Name}" to the vector.`,
+            input: str,
+            fileContents: [...fileContents],
+            vectorContents: [...vClients],
+            mem: [`vClients vector size: ${vClients.length}`],
+        });
+    });
+
+    steps.push({
+        i: stepCounter++,
+        phase: 'load_file',
+        code: `MyFile.close();`,
+        explanation: 'Finished reading all lines from the file.',
+        input: str,
+        fileContents: [...fileContents],
+        vectorContents: [...vClients],
+        mem: ['File closed'],
+    });
+
+    // --- Phase 4: Print Table ---
+    steps.push({
+        i: stepCounter++,
+        phase: 'print_table',
+        code: `PrintAllClientsData(vClients);`,
+        explanation: `Calling function to print the formatted table from the vector of clients.`,
+        input: str,
+        fileContents: [...fileContents],
+        vectorContents: [...vClients],
+        output: [...output],
+        mem: ['Starting to print table'],
+    });
+    
+    const header1 = `\n\t\t\t\t\tClient List (${vClients.length}) Client(s).`;
+    const header2 = "\n\n_________________________________________________________________________________________\n";
+    const header3 = "\n| Accout Number  | Pin Code  | Client Name                             | Phone       | Balance     ";
+    const header4 = "\n_________________________________________________________________________________________\n";
+    output.push(header1, header2, header3, header4);
+    
+    steps.push({
+        i: stepCounter++,
+        phase: 'print_table',
+        code: `// Printing table header`,
+        explanation: `Printing the header for the client list table.`,
+        input: str,
+        fileContents: [...fileContents],
+        vectorContents: [...vClients],
+        output: [...output],
+        mem: ['Header printed'],
+    });
+
+    vClients.forEach((client, index) => {
+        const clientRow = `\n| ${client.AccountNumber.padEnd(15)}| ${client.PinCode.padEnd(10)}| ${client.Name.padEnd(40)}| ${client.Phone.padEnd(12)}| ${client.AccountBalance.toString().padEnd(12)}`;
+        output.push(clientRow);
+        steps.push({
+            i: index,
+            phase: 'print_table',
+            code: `PrintClientRecord(Client); // For ${client.Name}`,
+            explanation: `Printing record for client ${index + 1}.`,
+            input: str,
+            fileContents: [...fileContents],
+            vectorContents: [...vClients],
+            output: [...output],
+            mem: [`Printing row ${index + 1}`],
+        });
+    });
+    
+    const footer = "\n\n_________________________________________________________________________________________\n";
+    output.push(footer);
+    steps.push({
+        i: stepCounter++,
+        phase: 'print_table',
+        code: `// Printing table footer`,
+        explanation: `Printing the footer of the client list table.`,
+        input: str,
+        fileContents: [...fileContents],
+        vectorContents: [...vClients],
+        output: [...output],
+        mem: ['Footer printed'],
+    });
+
+    steps.push({
+        i: stepCounter++,
+        code: 'return 0;',
+        explanation: 'Program finished.',
+        input: str,
+        fileContents: [...fileContents],
+        vectorContents: [...vClients],
+        output: [...output],
+        mem: ['Done'],
+    });
+
+    return steps;
+}
+
+function genFindClientByAccountNumberSteps(accountNumber: string): Step[] {
+    const steps: Step[] = [];
+    let stepCounter = 0;
+    const fileContents = [
+        "A101#//#1111#//#John Smith#//#555-0101#//#4500.5",
+        "A102#//#2222#//#Jane Doe#//#555-0102#//#8250",
+        "A123#//#5678#//#Mohammed Abu-Hadhoud#//#079000000#//#5124.88"
+    ];
+    const separator = "#//#";
+    const vClients = fileContents.map(line => {
+        const vClientData = line.split(separator);
+        return {
+            AccountNumber: vClientData[0],
+            PinCode: vClientData[1],
+            Name: vClientData[2],
+            Phone: vClientData[3],
+            AccountBalance: parseFloat(vClientData[4])
+        };
+    });
+
+    let found = false;
+    let resultClient: any = null;
+    let output: string[] = [];
+
+    // --- Phase 1: Read Account Number ---
+    steps.push({
+        i: stepCounter++,
+        phase: 'read_account_number',
+        code: `string AccountNumber = ReadClientAccountNumber();`,
+        explanation: `Simulating user input. Searching for Account Number: "${accountNumber}".`,
+        input: accountNumber,
+        mem: [`Target AccountNumber = "${accountNumber}"`],
+        search: { target: accountNumber, currentIndex: -1, found: false }
+    });
+
+    // --- Phase 2: Load Vector ---
+    steps.push({
+        i: stepCounter++,
+        phase: 'load_vector',
+        code: `vector<sClient> vClients = LoadCleintsDataFromFile(ClientsFileName);`,
+        explanation: `Loading all client data from "Clients.txt" into a vector in memory.`,
+        input: accountNumber,
+        mem: [`vClients now has ${vClients.length} records`],
+        fileContents: [...fileContents],
+        vectorContents: [...vClients],
+        search: { target: accountNumber, currentIndex: -1, found: false }
+    });
+
+    // --- Phase 3: Search Vector ---
+    steps.push({
+        i: stepCounter++,
+        phase: 'search_vector',
+        code: `for (sClient C : vClients)`,
+        explanation: `Begin iterating through the vector to find a match.`,
+        input: accountNumber,
+        mem: [`Starting search loop`],
+        vectorContents: [...vClients],
+        search: { target: accountNumber, currentIndex: -1, found: false }
+    });
+
+    for (let i = 0; i < vClients.length; i++) {
+        const C = vClients[i];
+        const match = C.AccountNumber === accountNumber;
+
+        steps.push({
+            i: i,
+            phase: 'search_vector',
+            code: `if (C.AccountNumber == "${accountNumber}")`,
+            explanation: `Checking client at index ${i}. Is "${C.AccountNumber}" == "${accountNumber}"? Result: ${match ? 'Yes' : 'No'}.`,
+            input: accountNumber,
+            mem: [`Comparing "${C.AccountNumber}" with "${accountNumber}"`],
+            vectorContents: [...vClients],
+            search: { target: accountNumber, currentIndex: i, found: false }
+        });
+
+        if (match) {
+            found = true;
+            resultClient = C;
+            steps.push({
+                i: i,
+                phase: 'search_vector',
+                code: `Client = C; return true;`,
+                explanation: `Match found! Assigning the client data and returning true. The loop terminates.`,
+                input: accountNumber,
+                mem: [`Found client: "${C.Name}"`, 'Exiting loop'],
+                vectorContents: [...vClients],
+                search: { target: accountNumber, currentIndex: i, found: true, resultClient: C }
+            });
+            break; 
+        }
+    }
+
+    if (!found) {
+        steps.push({
+            i: vClients.length,
+            phase: 'search_vector',
+            code: `// End of loop`,
+            explanation: `Finished iterating through the entire vector. No match was found. Returning false.`,
+            input: accountNumber,
+            mem: [`Client not found in vector`],
+            vectorContents: [...vClients],
+            search: { target: accountNumber, currentIndex: vClients.length - 1, found: false }
+        });
+    }
+
+    // --- Phase 4: Print Result ---
+    steps.push({
+        i: stepCounter++,
+        phase: 'print_result',
+        code: `if (FindClientByAccountNumber(...)) { ... } else { ... }`,
+        explanation: `The search function returned ${found}. Executing the ${found ? 'if' : 'else'} block.`,
+        input: accountNumber,
+        mem: [`Result of find: ${found}`],
+        vectorContents: [...vClients],
+        search: { target: accountNumber, currentIndex: -1, found, resultClient }
+    });
+
+    if (found) {
+        output.push(`\nThe following are the client details:`);
+        output.push(`\nAccout Number: ${resultClient.AccountNumber}`);
+        output.push(`\nPin Code      : ${resultClient.PinCode}`);
+        output.push(`\nName          : ${resultClient.Name}`);
+        output.push(`\nPhone         : ${resultClient.Phone}`);
+        output.push(`\nAccount Balance: ${resultClient.AccountBalance}`);
+
+        steps.push({
+            i: stepCounter++,
+            phase: 'print_result',
+            code: `PrintClientCard(Client);`,
+            explanation: `Printing the details for the found client: ${resultClient.Name}.`,
+            input: accountNumber,
+            output: [...output],
+            mem: [`Printing client card`],
+            search: { target: accountNumber, currentIndex: -1, found: true, resultClient }
+        });
+    } else {
+        output.push(`\nClient with Account Number (${accountNumber}) is Not Found!`);
+        steps.push({
+            i: stepCounter++,
+            phase: 'print_result',
+            code: `cout << "\\nClient with Account Number (${accountNumber}) is Not Found!";`,
+            explanation: `Printing the 'not found' message to the user.`,
+            input: accountNumber,
+            output: [...output],
+            mem: [`Printed 'not found' message`],
+            search: { target: accountNumber, currentIndex: -1, found: false }
+        });
+    }
+
+    steps.push({
+        i: stepCounter++,
+        code: 'return 0;',
+        explanation: 'Program finished.',
+        input: accountNumber,
+        output: [...output],
+        mem: ['Done'],
+        search: { target: accountNumber, currentIndex: -1, found, resultClient }
+    });
+
+    return steps;
+}
+
+function genDeleteClientByAccountNumberSteps(accountNumber: string): Step[] {
+    const steps: Step[] = [];
+    let stepCounter = 0;
+    const initialFileContents = [
+        "A101#//#1111#//#John Smith#//#555-0101#//#4500.5",
+        "A102#//#2222#//#Jane Doe#//#555-0102#//#8250",
+        "A123#//#5678#//#Mohammed Abu-Hadhoud#//#079000000#//#5124.88"
+    ];
+    let fileContents = [...initialFileContents];
+    const separator = "#//#";
+    
+    let vClients = fileContents.map(line => {
+        const vClientData = line.split(separator);
+        return {
+            AccountNumber: vClientData[0],
+            PinCode: vClientData[1],
+            Name: vClientData[2],
+            Phone: vClientData[3],
+            AccountBalance: parseFloat(vClientData[4]),
+            MarkForDelete: false
+        };
+    });
+
+    let output: string[] = [];
+
+    steps.push({
+        i: stepCounter++,
+        phase: 'read_account_number',
+        code: `string AccountNumber = ReadClientAccountNumber();`,
+        explanation: `Simulating user input. Target for deletion: "${accountNumber}".`,
+        input: accountNumber,
+        mem: [`Target AccountNumber = "${accountNumber}"`],
+        vectorContents: [...vClients],
+        fileContents: [...fileContents],
+        delete: { target: accountNumber, found: false, confirmed: null }
+    });
+
+    steps.push({
+        i: stepCounter++,
+        phase: 'load_vector',
+        code: `vector<sClient> vClients = LoadCleintsDataFromFile(ClientsFileName);`,
+        explanation: `Loading all client data from "Clients.txt" into a vector.`,
+        input: accountNumber,
+        mem: [`vClients now has ${vClients.length} records`],
+        vectorContents: [...vClients],
+        fileContents: [...fileContents],
+        delete: { target: accountNumber, found: false, confirmed: null }
+    });
+
+    // --- Find Client ---
+    let foundClient: any = null;
+    let foundIndex = -1;
+    for (let i = 0; i < vClients.length; i++) {
+        const C = vClients[i];
+        const match = C.AccountNumber === accountNumber;
+        steps.push({
+            i: i,
+            phase: 'find_client',
+            code: `if (C.AccountNumber == "${accountNumber}")`,
+            explanation: `Searching... Is "${C.AccountNumber}" == "${accountNumber}"? Result: ${match ? 'Yes' : 'No'}.`,
+            input: accountNumber,
+            mem: [`Comparing with index ${i}`],
+            vectorContents: [...vClients],
+            fileContents: [...fileContents],
+            delete: { target: accountNumber, found: false, confirmed: null }
+        });
+        if (match) {
+            foundClient = C;
+            foundIndex = i;
+            break;
+        }
+    }
+
+    if (!foundClient) {
+        output.push(`\nClient with Account Number (${accountNumber}) is Not Found!`);
+        steps.push({
+            i: stepCounter++,
+            phase: 'find_client',
+            code: `// Client Not Found`,
+            explanation: `Finished search. No match found for "${accountNumber}".`,
+            input: accountNumber,
+            output: [...output],
+            mem: [`Client not found`],
+            vectorContents: [...vClients],
+            fileContents: [...fileContents],
+            delete: { target: accountNumber, found: false, confirmed: null }
+        });
+    } else {
+        steps.push({
+            i: foundIndex,
+            phase: 'find_client',
+            code: `// Client Found`,
+            explanation: `Match found for "${accountNumber}" at index ${foundIndex}.`,
+            input: accountNumber,
+            mem: [`Found client: "${foundClient.Name}"`],
+            vectorContents: [...vClients],
+            fileContents: [...fileContents],
+            delete: { target: accountNumber, found: true, confirmed: null, client: foundClient }
+        });
+
+        // --- Confirm Delete ---
+        output.push(`\nThe following are the client details:`, `\nAccout Number: ${foundClient.AccountNumber}`, `\nPin Code      : ${foundClient.PinCode}`, `\nName          : ${foundClient.Name}`, `\nPhone         : ${foundClient.Phone}`, `\nAccount Balance: ${foundClient.AccountBalance}`);
+        steps.push({
+            i: stepCounter++,
+            phase: 'confirm_delete',
+            code: `PrintClientCard(Client);`,
+            explanation: `Displaying client details before asking for confirmation.`,
+            input: accountNumber,
+            output: [...output],
+            mem: [`Printing client card`],
+            vectorContents: [...vClients],
+            fileContents: [...fileContents],
+            delete: { target: accountNumber, found: true, confirmed: null, client: foundClient }
+        });
+
+        output.push(`\n\nAre you sure you want delete this client? y/n ? `);
+        steps.push({
+            i: stepCounter++,
+            phase: 'confirm_delete',
+            code: `cin >> Answer;`,
+            explanation: `Simulating user confirming deletion by entering 'y'.`,
+            input: accountNumber,
+            output: [...output],
+            mem: [`Answer = 'y'`],
+            vectorContents: [...vClients],
+            fileContents: [...fileContents],
+            delete: { target: accountNumber, found: true, confirmed: true, client: foundClient }
+        });
+
+        // --- Mark for Delete ---
+        vClients[foundIndex].MarkForDelete = true;
+        steps.push({
+            i: foundIndex,
+            phase: 'mark_for_delete',
+            code: `MarkClientForDeleteByAccountNumber(AccountNumber, vClients);`,
+            explanation: `Setting MarkForDelete = true on the client struct in the vector. This is a "soft delete".`,
+            input: accountNumber,
+            mem: [`Marked "${foundClient.Name}" for deletion`],
+            vectorContents: [...vClients],
+            fileContents: [...fileContents],
+            delete: { target: accountNumber, found: true, confirmed: true, client: foundClient }
+        });
+
+        // --- Save to File ---
+        const newFileContents: string[] = [];
+        steps.push({
+            i: stepCounter++,
+            phase: 'save_to_file',
+            code: `SaveCleintsDataToFile(ClientsFileName, vClients);`,
+            explanation: `Opening "Clients.txt" in write mode (ios::out) to overwrite it.`,
+            input: accountNumber,
+            mem: [`Opening file for overwrite`],
+            vectorContents: [...vClients],
+            fileContents: [...fileContents],
+            delete: { target: accountNumber, found: true, confirmed: true, client: foundClient }
+        });
+        
+        for(let i = 0; i < vClients.length; i++) {
+            const C = vClients[i];
+            if (!C.MarkForDelete) {
+                const line = `${C.AccountNumber}${separator}${C.PinCode}${separator}${C.Name}${separator}${C.Phone}${separator}${C.AccountBalance}`;
+                newFileContents.push(line);
+                 steps.push({
+                    i: i,
+                    phase: 'save_to_file',
+                    code: `if (C.MarkForDelete == false) { MyFile << DataLine << endl; }`,
+                    explanation: `Client "${C.Name}" is NOT marked for delete. Writing its record to the file.`,
+                    input: accountNumber,
+                    mem: [`Writing line for ${C.AccountNumber}`],
+                    vectorContents: [...vClients],
+                    fileContents: [...newFileContents],
+                    delete: { target: accountNumber, found: true, confirmed: true, client: foundClient }
+                });
+            } else {
+                 steps.push({
+                    i: i,
+                    phase: 'save_to_file',
+                    code: `if (C.MarkForDelete == false) { ... }`,
+                    explanation: `Client "${C.Name}" IS marked for delete. Skipping this record.`,
+                    input: accountNumber,
+                    mem: [`Skipping line for ${C.AccountNumber}`],
+                    vectorContents: [...vClients],
+                    fileContents: [...newFileContents],
+                    delete: { target: accountNumber, found: true, confirmed: true, client: foundClient }
+                });
+            }
+        }
+        fileContents = newFileContents;
+
+        steps.push({
+            i: stepCounter++,
+            phase: 'save_to_file',
+            code: `MyFile.close();`,
+            explanation: `Finished writing. Closing the file. The client has now been permanently deleted from the file.`,
+            input: accountNumber,
+            mem: [`File closed`],
+            vectorContents: [...vClients],
+            fileContents: [...fileContents],
+            delete: { target: accountNumber, found: true, confirmed: true, client: foundClient }
+        });
+
+        // --- Reload Vector ---
+        vClients = vClients.filter(c => !c.MarkForDelete);
+        steps.push({
+            i: stepCounter++,
+            phase: 'reload_vector',
+            code: `vClients = LoadCleintsDataFromFile(ClientsFileName);`,
+            explanation: `Reloading the data from the updated file to refresh the in-memory vector.`,
+            input: accountNumber,
+            mem: [`Vector is now refreshed. Size: ${vClients.length}`],
+            vectorContents: [...vClients],
+            fileContents: [...fileContents],
+            delete: { target: accountNumber, found: true, confirmed: true, client: foundClient }
+        });
+        
+        output.push(`\n\nClient Deleted Successfully.`);
+        steps.push({
+            i: stepCounter++,
+            phase: 'print_result',
+            code: `cout << "\\n\\nClient Deleted Successfully.";`,
+            explanation: `Printing final success message.`,
+            input: accountNumber,
+            output: [...output],
+            mem: [`Deletion successful`],
+            vectorContents: [...vClients],
+            fileContents: [...fileContents],
+            delete: { target: accountNumber, found: true, confirmed: true, client: foundClient }
+        });
+    }
+
+    steps.push({
+        i: stepCounter++,
+        code: 'return 0;',
+        explanation: 'Program finished.',
+        input: accountNumber,
+        output: [...output],
+        mem: ['Done'],
+        vectorContents: [...vClients],
+        fileContents: [...fileContents],
+    });
+
+    return steps;
+}
+
+
 export const problems: Problem[] = [
   { id: 1, title: 'Problem 1 — Print First Letter of Each Word', description: 'Read a string and print the first letter of every word.', example: 'programming is fun', generator: genPrintFirstLettersSteps, functions: [
     {name: 'ReadString()', signature: 'string ReadString()', explanation: 'Reads a full line including spaces.', code: `string ReadString()\n{\n    string S1;\n    getline(cin, S1);\n    return S1;\n}`},
@@ -2243,5 +2811,113 @@ export const problems: Problem[] = [
       }
     ],
     keyConcepts: ['File I/O', 'fstream', 'ios::app', 'do-while loop', 'Function Composition', 'User Input Simulation']
+  },
+  {
+    id: 24,
+    title: 'Problem 24 — Load Clients from File to Vector',
+    description: 'Visualize reading a file line by line, parsing each line into a struct, storing these structs in a vector, and finally printing a formatted list.',
+    example: 'This problem is a simulation and does not take input.',
+    generator: genLoadClientsFromFileSteps,
+    functions: [
+       {
+        name: 'SplitString',
+        signature: 'vector<string> SplitString(string S1, string Delim)',
+        explanation: 'A helper function that tokenizes a string by a delimiter and returns a vector of the tokens.',
+        code: `vector<string> SplitString(string S1, string Delim)\n{\n    vector<string> vString;\n    short pos = 0;\n    string sWord;\n    while ((pos = S1.find(Delim)) != std::string::npos)\n    {\n        sWord = S1.substr(0, pos);\n        if (sWord != "")\n        {\n            vString.push_back(sWord);\n        }\n        S1.erase(0, pos + Delim.length());\n    }\n    if (S1 != "")\n    {\n        vString.push_back(S1);\n    }\n    return vString;\n}`
+      },
+      {
+        name: 'ConvertLinetoRecord',
+        signature: 'sClient ConvertLinetoRecord(string Line, string Seperator)',
+        explanation: 'Uses SplitString to get a vector of data, then assigns each vector element to the corresponding field in an sClient struct. It uses `stod` to convert the balance.',
+        code: `struct sClient\n{\n    string AccountNumber;\n    string PinCode;\n    string Name;\n    string Phone;\n    double AccountBalance;\n};\n\nsClient ConvertLinetoRecord(string Line, string Seperator = "#//#")\n{\n    sClient Client;\n    vector<string> vClientData;\n    vClientData = SplitString(Line, Seperator);\n    \n    Client.AccountNumber = vClientData[0];\n    Client.PinCode = vClientData[1];\n    Client.Name = vClientData[2];\n    Client.Phone = vClientData[3];\n    Client.AccountBalance = stod(vClientData[4]);\n    \n    return Client;\n}`
+      },
+       {
+        name: 'LoadCleintsDataFromFile',
+        signature: 'vector<sClient> LoadCleintsDataFromFile(string FileName)',
+        explanation: 'Opens a file, reads it line by line using `getline`, parses each line into a struct, and adds the struct to a vector which is then returned.',
+        code: `vector<sClient> LoadCleintsDataFromFile(string FileName)\n{\n    vector<sClient> vClients;\n    fstream MyFile;\n    MyFile.open(FileName, ios::in);\n    \n    if (MyFile.is_open())\n    {\n        string Line;\n        sClient Client;\n        \n        while (getline(MyFile, Line))\n        {\n            Client = ConvertLinetoRecord(Line);\n            vClients.push_back(Client);\n        }\n        MyFile.close();\n    }\n    return vClients;\n}`
+      },
+      {
+        name: 'PrintAllClientsData',
+        signature: 'void PrintAllClientsData(vector<sClient> vClients)',
+        explanation: 'Prints a formatted header, then iterates through a vector of clients, printing each one as a formatted row. It uses `setw` from `<iomanip>` for alignment.',
+        code: `void PrintClientRecord(sClient Client)\n{\n    cout << "| " << setw(15) << left << Client.AccountNumber;\n    cout << "| " << setw(10) << left << Client.PinCode;\n    cout << "| " << setw(40) << left << Client.Name;\n    cout << "| " << setw(12) << left << Client.Phone;\n    cout << "| " << setw(12) << left << Client.AccountBalance;\n}\n\nvoid PrintAllClientsData(vector<sClient> vClients)\n{\n    cout << "\\n\\t\\t\\t\\t\\tClient List (" << vClients.size() << ") Client(s).";\n    cout << "\\n\\n_______________________________________________________";\n    cout << "_________________________________________\\n" << endl;\n    \n    cout << "| " << left << setw(15) << "Accout Number";\n    cout << "| " << left << setw(10) << "Pin Code";\n    cout << "| " << left << setw(40) << "Client Name";\n    cout << "| " << left << setw(12) << "Phone";\n    cout << "| " << left << setw(12) << "Balance";\n    cout << "\\n_______________________________________________________";\n    cout << "_________________________________________\\n" << endl;\n    \n    for (sClient Client : vClients)\n    {\n        PrintClientRecord(Client);\n        cout << endl;\n    }\n    \n    cout << "\\n_______________________________________________________";\n    cout << "_________________________________________\\n" << endl;\n}`
+      },
+    ],
+    keyConcepts: ['File Reading', 'fstream', 'getline()', 'std::vector<struct>', 'Formatted Output', 'setw()', 'iomanip']
+  },
+  {
+    id: 25,
+    title: 'Problem 25 — Find Client by Account Number',
+    description: 'Visualize finding a client record by searching for their account number in a vector loaded from a file.',
+    example: 'A102',
+    generator: genFindClientByAccountNumberSteps,
+    functions: [
+       {
+        name: 'SplitString, ConvertLinetoRecord, LoadCleintsDataFromFile',
+        signature: '// Helper functions from previous problems',
+        explanation: 'These functions are used to load the client data from "Clients.txt" into a vector of structs, which is a prerequisite for searching.',
+        code: `// Functions SplitString, ConvertLinetoRecord, and LoadCleintsDataFromFile are assumed to be defined as in Problem 24.`
+      },
+      {
+        name: 'PrintClientCard',
+        signature: 'void PrintClientCard(sClient Client)',
+        explanation: 'A utility function to print the details of a single client in a card-like format.',
+        code: `void PrintClientCard(sClient Client)\n{\n    cout << "\\nThe following are the client details:\\n";\n    cout << "\\nAccout Number: " << Client.AccountNumber;\n    cout << "\\nPin Code      : " << Client.PinCode;\n    cout << "\\nName          : " << Client.Name;\n    cout << "\\nPhone         : " << Client.Phone;\n    cout << "\\nAccount Balance: " << Client.AccountBalance;\n}`
+      },
+      {
+        name: 'FindClientByAccountNumber',
+        signature: 'bool FindClientByAccountNumber(string AccountNumber, sClient& Client)',
+        explanation: 'Loads all clients into a vector. It then iterates through the vector, comparing account numbers. If a match is found, it updates the `Client` struct (passed by reference) and returns `true`. Otherwise, it returns `false`.',
+        code: `struct sClient\n{\n    string AccountNumber;\n    string PinCode;\n    string Name;\n    string Phone;\n    double AccountBalance;\n};\n\nbool FindClientByAccountNumber(string AccountNumber, sClient& Client)\n{\n    vector<sClient> vClients = LoadCleintsDataFromFile("Clients.txt");\n    \n    for (sClient C : vClients)\n    {\n        if (C.AccountNumber == AccountNumber)\n        {\n            Client = C;\n            return true;\n        }\n    }\n    return false;\n}`
+      },
+      {
+        name: 'ReadClientAccountNumber',
+        signature: 'string ReadClientAccountNumber()',
+        explanation: 'A simple utility function to prompt the user and read the account number they want to find.',
+        code: `string ReadClientAccountNumber()\n{\n    string AccountNumber = "";\n    cout << "\\nPlease enter AccountNumber? ";\n    cin >> AccountNumber;\n    return AccountNumber;\n}`
+      }
+    ],
+    keyConcepts: ['Linear Search', 'Pass by Reference', 'Vector Iteration', 'Boolean Return Value', 'Conditional Logic']
+  },
+  {
+    id: 26,
+    title: 'Problem 26 — Delete Client by Account Number',
+    description: 'Visualize finding a client, marking them for deletion, and then rewriting the file without that client.',
+    example: 'A102',
+    generator: genDeleteClientByAccountNumberSteps,
+    functions: [
+      {
+        name: 'Helper Functions',
+        signature: '// Load, Convert, Split',
+        explanation: 'This problem relies on several helper functions from previous problems to load and convert client data from the text file.',
+        code: `// Functions SplitString, ConvertLinetoRecord, and LoadCleintsDataFromFile are assumed to be defined as in Problem 24.`
+      },
+       {
+        name: 'FindClientByAccountNumber',
+        signature: 'bool FindClientByAccountNumber(string AccountNumber, vector<sClient> vClients, sClient& Client)',
+        explanation: 'Iterates through the provided vector to find a client. Note: This version doesn\'t reload from file, it searches the in-memory vector.',
+        code: `bool FindClientByAccountNumber(string AccountNumber, vector<sClient> vClients, sClient& Client)\n{\n    for (sClient C : vClients)\n    {\n        if (C.AccountNumber == AccountNumber)\n        {\n            Client = C;\n            return true;\n        }\n    }\n    return false;\n}`
+      },
+      {
+        name: 'MarkClientForDeleteByAccountNumber',
+        signature: 'bool MarkClientForDeleteByAccountNumber(string AccountNumber, vector<sClient>& vClients)',
+        explanation: 'Finds a client by account number and sets their `MarkForDelete` flag to true. The vector is passed by reference (&) so the change persists.',
+        code: `struct sClient\n{\n    string AccountNumber;\n    string PinCode;\n    string Name;\n    string Phone;\n    double AccountBalance;\n    bool MarkForDelete = false;\n};\n\nbool MarkClientForDeleteByAccountNumber(string AccountNumber, vector<sClient>& vClients)\n{\n    for (sClient& C : vClients)\n    {\n        if (C.AccountNumber == AccountNumber)\n        {\n            C.MarkForDelete = true;\n            return true;\n        }\n    }\n    return false;\n}`
+      },
+      {
+        name: 'SaveCleintsDataToFile',
+        signature: 'vector<sClient> SaveCleintsDataToFile(string FileName, vector<sClient> vClients)',
+        explanation: 'Opens a file in write mode (`ios::out`), which overwrites it. It then iterates through the vector and writes only the records where `MarkForDelete` is false.',
+        code: `vector<sClient> SaveCleintsDataToFile(string FileName, vector<sClient> vClients)\n{\n    fstream MyFile;\n    MyFile.open(FileName, ios::out); //overwrite\n    string DataLine;\n    if (MyFile.is_open())\n    {\n        for (sClient C : vClients)\n        {\n            if (C.MarkForDelete == false)\n            {\n                DataLine = ConvertRecordToLine(C);\n                MyFile << DataLine << endl;\n            }\n        }\n        MyFile.close();\n    }\n    return vClients;\n}`
+      },
+      {
+        name: 'DeleteClientByAccountNumber',
+        signature: 'bool DeleteClientByAccountNumber(string AccountNumber, vector<sClient>& vClients)',
+        explanation: 'The main orchestrator function. It finds the client, asks for confirmation, marks for deletion, saves the updated list to the file, and then reloads the vector to reflect the changes.',
+        code: `bool DeleteClientByAccountNumber(string AccountNumber, vector<sClient>& vClients)\n{\n    sClient Client;\n    char Answer = 'n';\n    if (FindClientByAccountNumber(AccountNumber, vClients, Client))\n    {\n        PrintClientCard(Client);\n        cout << "\\n\\nAre you sure you want delete this client? y/n ? ";\n        cin >> Answer;\n        if (Answer == 'y' || Answer == 'Y')\n        {\n            MarkClientForDeleteByAccountNumber(AccountNumber, vClients);\n            SaveCleintsDataToFile(ClientsFileName, vClients);\n            //Refresh Clients\n            vClients = LoadCleintsDataFromFile(ClientsFileName);\n            cout << "\\n\\nClient Deleted Successfully.";\n            return true;\n        }\n    }\n    else\n    {\n        cout << "\\nClient with Account Number (" << AccountNumber << ") is Not Found!";\n        return false;\n    }\n}`
+      }
+    ],
+    keyConcepts: ['Soft Delete', 'File Overwriting (ios::out)', 'Vector Pass-by-Reference', 'Data Persistence', 'State Management']
   }
 ];
