@@ -67,18 +67,14 @@ function genUpperThenLowerSteps(str: string): Step[] {
   for (let i = 0; i < arr.length; i++) {
     const before = arr[i];
     arr[i] = arr[i].toUpperCase();
-    // FIX: Added missing 'input' property to satisfy the 'Step' interface.
     steps.push({ i, phase: 'upper', code: `S1[${i}] = toupper(S1[${i}])`, explanation: `Upper '${before}' -> '${arr[i]}'`, input: str, modified: arr.join(''), mem: [`Upper S1[${i}] -> ${arr[i]}`] });
   }
-  // FIX: Added missing 'input' property to satisfy the 'Step' interface.
   steps.push({ i: arr.length, phase: 'upper', code: 'Print S1 (Upper)', explanation: 'Print uppercased string', input: str, modified: arr.join(''), mem: [`Printed upper: ${arr.join('')}`] });
   for (let i = 0; i < arr.length; i++) {
     const before = arr[i];
     arr[i] = arr[i].toLowerCase();
-    // FIX: Added missing 'input' property to satisfy the 'Step' interface.
     steps.push({ i, phase: 'lower', code: `S1[${i}] = tolower(S1[${i}])`, explanation: `Lower '${before}' -> '${arr[i]}'`, input: str, modified: arr.join(''), mem: [`Lower S1[${i}] -> ${arr[i]}`] });
   }
-  // FIX: Added missing 'input' property to satisfy the 'Step' interface.
   steps.push({ i: arr.length, phase: 'lower', code: 'Print S1 (Lower)', explanation: 'Print lowercased string', input: str, modified: arr.join(''), mem: [`Printed lower: ${arr.join('')}`] });
   return steps;
 }
@@ -1036,6 +1032,193 @@ function genTrimSteps(str: string): Step[] {
   return steps;
 }
 
+function genJoinStringSteps(str: string): Step[] {
+  // For this problem, the input `str` will be the delimiter.
+  const delim = str || " ";
+  const vString = ["Mohammed", "Faid", "Ali", "Maher"];
+  const steps: Step[] = [];
+  let S1 = "";
+  let stepCounter = 0;
+
+  steps.push({
+    i: stepCounter++,
+    code: `string S1 = "";`,
+    explanation: 'Initialize an empty string `S1` which will hold the result.',
+    input: str,
+    modified: S1,
+    mem: [`S1 = ""`, `vString = {${vString.join(', ')}}`]
+  });
+
+  for (let i = 0; i < vString.length; i++) {
+    const s = vString[i];
+    const s1Before = S1;
+    S1 = S1 + s + delim;
+    
+    steps.push({
+      i: stepCounter++,
+      code: `S1 = S1 + s + "${delim}";`,
+      explanation: `Concatenate current string with vector element "${s}" and the delimiter.`,
+      input: str,
+      modified: S1,
+      mem: [`s = "${s}"`, `S1 was: "${s1Before}"`, `S1 is now: "${S1}"`]
+    });
+  }
+
+  steps.push({
+    i: stepCounter++,
+    code: `// Loop finished`,
+    explanation: 'The loop has finished. The string now has an extra delimiter at the end.',
+    input: str,
+    modified: S1,
+    mem: [`Final looped string: "${S1}"`]
+  });
+
+  const finalString = S1.substring(0, S1.length - delim.length);
+  steps.push({
+    i: stepCounter++,
+    code: `return S1.substr(0, S1.length() - ${delim.length});`,
+    explanation: `Remove the trailing delimiter using substr. The final length is original length - delimiter length.`,
+    input: str,
+    modified: finalString,
+    output: [finalString],
+    mem: [`Final result: "${finalString}"`]
+  });
+  
+  steps.push({
+    i: stepCounter++,
+    code: 'return 0;',
+    explanation: 'Program finished.',
+    input: str,
+    modified: finalString,
+    output: [finalString],
+    mem: ['Done']
+  });
+
+  return steps;
+}
+
+function genJoinStringOverloadSteps(str: string): Step[] {
+    const delim = str || " ";
+    const vString = ["Mohammed", "Faid", "Ali", "Maher"];
+    const arrString = ["Mohammed", "Faid", "Ali", "Maher"];
+    const steps: Step[] = [];
+    let S1 = "";
+    let stepCounter = 0;
+    let finalVectorString = "";
+    let finalArrayString = "";
+
+    // --- Phase: Vector ---
+    steps.push({
+        i: stepCounter++,
+        phase: 'vector',
+        code: 'cout << JoinString(vString, " ");',
+        explanation: 'Calling the overloaded JoinString function that accepts a std::vector.',
+        input: str,
+        modified: S1,
+        mem: ['Calling vector version', `vString = {${vString.join(', ')}}`]
+    });
+
+    for (let i = 0; i < vString.length; i++) {
+        const s = vString[i];
+        const s1Before = S1;
+        S1 = S1 + s + delim;
+        steps.push({
+            i: stepCounter++,
+            phase: 'vector',
+            code: `S1 = S1 + s + "${delim}";`,
+            explanation: `Vector loop (i=${i}): Concatenate with element "${s}" and the delimiter.`,
+            input: str,
+            modified: S1,
+            mem: [`s = "${s}"`, `S1 was: "${s1Before}"`, `S1 is now: "${S1}"`]
+        });
+    }
+
+    steps.push({
+        i: stepCounter++,
+        phase: 'vector',
+        code: `// Vector loop finished`,
+        explanation: 'The vector loop has finished. String has a trailing delimiter.',
+        input: str,
+        modified: S1,
+        mem: [`Looped string: "${S1}"`]
+    });
+
+    finalVectorString = S1.substring(0, S1.length - delim.length);
+    steps.push({
+        i: stepCounter++,
+        phase: 'vector',
+        code: `return S1.substr(0, S1.length() - ${delim.length});`,
+        explanation: `Remove the trailing delimiter.`,
+        input: str,
+        modified: finalVectorString,
+        output: [finalVectorString],
+        mem: [`Result from vector: "${finalVectorString}"`]
+    });
+
+    // --- Phase: Array ---
+    S1 = ""; // Reset for the next part
+    steps.push({
+        i: stepCounter++,
+        phase: 'array',
+        code: 'cout << JoinString(arrString, 4, " ");',
+        explanation: 'Calling the overloaded JoinString function that accepts a C-style array and its length.',
+        input: str,
+        modified: S1,
+        mem: ['Calling array version', `arrString = {${arrString.join(', ')}}`, `S1 = ""`]
+    });
+
+    for (let i = 0; i < arrString.length; i++) {
+        const s = arrString[i];
+        const s1Before = S1;
+        S1 = S1 + s + delim;
+        steps.push({
+            i: stepCounter++,
+            phase: 'array',
+            code: `S1 = S1 + arrString[${i}] + "${delim}";`,
+            explanation: `Array loop (i=${i}): Concatenate with element "${s}" and the delimiter.`,
+            input: str,
+            modified: S1,
+            output: [finalVectorString],
+            mem: [`arrString[${i}] = "${s}"`, `S1 was: "${s1Before}"`, `S1 is now: "${S1}"`]
+        });
+    }
+    
+    steps.push({
+        i: stepCounter++,
+        phase: 'array',
+        code: `// Array loop finished`,
+        explanation: 'The array loop has finished. String has a trailing delimiter.',
+        input: str,
+        modified: S1,
+        output: [finalVectorString],
+        mem: [`Looped string: "${S1}"`]
+    });
+
+    finalArrayString = S1.substring(0, S1.length - delim.length);
+    steps.push({
+        i: stepCounter++,
+        phase: 'array',
+        code: `return S1.substr(0, S1.length() - ${delim.length});`,
+        explanation: `Remove the trailing delimiter.`,
+        input: str,
+        modified: finalArrayString,
+        output: [finalVectorString, finalArrayString],
+        mem: [`Result from array: "${finalArrayString}"`]
+    });
+
+    steps.push({
+        i: stepCounter++,
+        code: 'return 0;',
+        explanation: 'Program finished.',
+        input: str,
+        modified: finalArrayString,
+        output: [finalVectorString, finalArrayString],
+        mem: ['Done']
+    });
+
+    return steps;
+}
+
 
 export const problems: Problem[] = [
   { id: 1, title: 'Problem 1 — Print First Letter of Each Word', description: 'Read a string and print the first letter of every word.', example: 'programming is fun', generator: genPrintFirstLettersSteps, functions: [
@@ -1249,7 +1432,7 @@ export const problems: Problem[] = [
     id: 15,
     title: 'Problem 15 — Trim Left, Right, and All',
     description: 'Read a string and demonstrate trimming leading spaces, trailing spaces, and both.',
-    example: '     Mohammed Abu-Hahdoud     ',
+    example: '     Mohammed Abu-Hadhoud     ',
     generator: genTrimSteps,
     functions: [
         {
@@ -1272,5 +1455,43 @@ export const problems: Problem[] = [
         }
     ],
     keyConcepts: ['String Iteration', 'substr()', 'Function Composition', 'Whitespace Handling']
+  },
+  {
+    id: 16,
+    title: 'Problem 16 — Join Vector to String',
+    description: 'Join a vector of strings into a single string, separated by a delimiter.',
+    example: ' ',
+    generator: genJoinStringSteps,
+    functions: [
+        {
+            name: 'JoinString(vector<string> vString, string Delim)',
+            signature: 'string JoinString(vector<string> vString, string Delim)',
+            explanation: 'Iterates through a vector of strings, concatenating each element and a delimiter to a result string. Finally, it removes the last trailing delimiter.',
+            code: `string JoinString(vector<string> vString, string Delim)\n{\n    string S1 = "";\n    \n    for (string& s : vString)\n    {\n        S1 = S1 + s + Delim;\n    }\n    \n    return S1.substr(0, S1.length() - Delim.length());\n}`
+        }
+    ],
+    keyConcepts: ['std::vector', 'String Concatenation', 'Range-based for loop', 'substr()']
+  },
+  {
+    id: 17,
+    title: 'Problem 17 — Join String (Vector & Array)',
+    description: 'Demonstrates function overloading by joining both a vector and a C-style array of strings into a single string.',
+    example: ' ',
+    generator: genJoinStringOverloadSteps,
+    functions: [
+        {
+            name: 'JoinString (vector overload)',
+            signature: 'string JoinString(vector<string> vString, string Delim)',
+            explanation: 'Iterates through a vector of strings, concatenating each element and a delimiter to a result string. Finally, it removes the last trailing delimiter.',
+            code: `string JoinString(vector<string> vString, string Delim)\n{\n    string S1 = "";\n    \n    for (string& s : vString)\n    {\n        S1 = S1 + s + Delim;\n    }\n    \n    return S1.substr(0, S1.length() - Delim.length());\n}`
+        },
+        {
+            name: 'JoinString (array overload)',
+            signature: 'string JoinString(string arrString[], short Length, string Delim)',
+            explanation: 'Iterates through a C-style array of strings, concatenating each element and a delimiter to a result string. Finally, it removes the last trailing delimiter.',
+            code: `string JoinString(string arrString[], short Length, string Delim)\n{\n    string S1 = "";\n    \n    for (short i = 0; i < Length; i++)\n    {\n        S1 = S1 + arrString[i] + Delim;\n    }\n    \n    return S1.substr(0, S1.length() - Delim.length());\n}`
+        }
+    ],
+    keyConcepts: ['Function Overloading', 'C-style Arrays', 'std::vector', 'String Concatenation']
   }
 ];

@@ -1,3 +1,4 @@
+// types.ts
 export interface FunctionDef {
   name: string;
   signature: string;
@@ -13,8 +14,7 @@ export interface Step {
   output?: string[];
   modified?: string;
   mem: string[];
-  // FIX: Added 'left', 'right', and 'all' to the allowed phase types to support the Trim problem visualization.
-  phase?: 'upper' | 'lower' | 'read' | 'invert' | 'print' | 'sensitive' | 'insensitive' | 'convert' | 'check' | 'result' | 'left' | 'right' | 'all';
+  phase?: 'upper' | 'lower' | 'read' | 'invert' | 'print' | 'sensitive' | 'insensitive' | 'convert' | 'check' | 'result' | 'left' | 'right' | 'all' | 'vector' | 'array';
 }
 
 export interface Problem {

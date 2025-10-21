@@ -171,6 +171,26 @@ const Visualizer: React.FC<VisualizerProps> = ({ problem }) => {
     cout << "\\nTrim       = " << Trim(S1) << endl;
             `;
             break;
+        case 16:
+            mainBody = `
+    vector<string> vString = { "Mohammed", "Faid", "Ali", "Maher" };
+    
+    cout << "\\nVector after join with delimiter \\"${problem.example}\\":\\n";
+    cout << JoinString(vString, "${problem.example}") << endl;
+            `;
+            break;
+        case 17:
+            mainBody = `
+    vector<string> vString = { "Mohammed", "Faid", "Ali", "Maher" };
+    string arrString[] = { "Mohammed", "Faid", "Ali", "Maher" };
+    
+    cout << "\\nVector after join: \\n";
+    cout << JoinString(vString, "${problem.example}");
+    
+    cout << "\\n\\nArray after join: \\n";
+    cout << JoinString(arrString, 4, "${problem.example}") << endl;
+            `;
+            break;
         default:
             mainBody = `    // TODO: Implement main execution logic for this problem.`;
     }
@@ -247,6 +267,9 @@ ${mainBody}
   const isWordCounterProblem = problem.id === 13;
   const isVectorProblem = problem.id === 14;
   const isTrimProblem = problem.id === 15;
+  const isJoinProblem = problem.id === 16;
+  const isJoinOverloadProblem = problem.id === 17;
+
 
   return (
     <div className="card">
@@ -262,9 +285,9 @@ ${mainBody}
             </button>
         </div>
         <div className="mb-3">
-          <label className="text-xs font-medium">Input:</label>
+          <label className="text-xs font-medium">{[16, 17].includes(problem.id) ? 'Delimiter Input:' : 'Input:'}</label>
           <input value={input} onChange={e => setInput((problem.id === 5 || problem.id === 9) ? e.target.value.slice(0, 1) : e.target.value)} className="w-full mt-2 p-3 rounded text-lg mono bg-sky-50 border-2 border-cyan-300 focus:border-teal-500 focus:ring focus:ring-teal-200 focus:ring-opacity-50 transition-colors duration-200 ease-in-out" />
-          <div className="text-xs text-gray-500 mt-2">Try: {problem.example}</div>
+          <div className="text-xs text-gray-500 mt-2">{[16, 17].includes(problem.id) ? `Try: "--" or ", "` : `Try: ${problem.example}`}</div>
         </div>
 
         <div className="flex flex-col sm:flex-row items-center justify-between mb-4 gap-2">
@@ -279,7 +302,7 @@ ${mainBody}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div className="lg:col-span-2">
             <div className="mb-4">
-              <div className="text-sm font-semibold mb-2">Original Input (Read-Only)</div>
+              <div className="text-sm font-semibold mb-2">{isJoinProblem || isJoinOverloadProblem ? 'Input Collections (Fixed)' : 'Original Input (Read-Only)'}</div>
                {isIndexedLoopProblem ? (
                   <div className="p-3 border rounded bg-white overflow-x-auto">
                     <table className="w-full border-collapse">
@@ -297,6 +320,46 @@ ${mainBody}
                       </tbody>
                     </table>
                   </div>
+                ) : isJoinProblem ? (
+                  <div className="p-3 border rounded bg-white flex flex-wrap items-center justify-center gap-2 min-h-[96px]">
+                    <span className="mono text-xl">{'{'}</span>
+                    {["Mohammed", "Faid", "Ali", "Maher"].map((item, idx) => (
+                      <React.Fragment key={idx}>
+                        <span className="p-2 bg-sky-100 rounded text-lg mono">"{item}"</span>
+                        {idx < 3 && <span className="text-gray-400">,</span>}
+                      </React.Fragment>
+                    ))}
+                    <span className="mono text-xl">{'}'}</span>
+                  </div>
+                ) : isJoinOverloadProblem ? (
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                     <div className="p-3 border rounded bg-white">
+                       <div className="text-xs font-semibold text-center mb-2">std::vector&lt;string&gt;</div>
+                       <div className="flex flex-wrap items-center justify-center gap-1">
+                          <span className="mono text-lg">{'{'}</span>
+                          {["Mohammed", "Faid", "Ali", "Maher"].map((item, idx) => (
+                            <React.Fragment key={idx}>
+                              <span className="p-1 bg-sky-100 rounded text-base mono">"{item}"</span>
+                              {idx < 3 && <span className="text-gray-400">,</span>}
+                            </React.Fragment>
+                          ))}
+                          <span className="mono text-lg">{'}'}</span>
+                       </div>
+                     </div>
+                      <div className="p-3 border rounded bg-white">
+                       <div className="text-xs font-semibold text-center mb-2">string[]</div>
+                       <div className="flex flex-wrap items-center justify-center gap-1">
+                          <span className="mono text-lg">{'{'}</span>
+                          {["Mohammed", "Faid", "Ali", "Maher"].map((item, idx) => (
+                            <React.Fragment key={idx}>
+                              <span className="p-1 bg-sky-100 rounded text-base mono">"{item}"</span>
+                              {idx < 3 && <span className="text-gray-400">,</span>}
+                            </React.Fragment>
+                          ))}
+                          <span className="mono text-lg">{'}'}</span>
+                       </div>
+                     </div>
+                   </div>
                 ) : (
                   <div className="p-3 border rounded bg-white flex items-center justify-center min-h-[96px]">
                     <div className="text-2xl font-bold mono p-4">{[12, 13, 14, 15].includes(problem.id) ? input : (charList[0] || '')}</div>
@@ -337,13 +400,15 @@ ${mainBody}
                 <div className="p-4 bg-sky-100 rounded text-center mono font-bold text-xl">{current.i === undefined || current.i < 0 ? 'START' : current.i}</div>
               </div>
 
-              {isTrimProblem && (() => {
+              {(isTrimProblem || isJoinOverloadProblem) && (() => {
                   const phaseMap: {[key: string]: string} = {
                       left: 'Trim Left',
                       right: 'Trim Right',
-                      all: 'Trim All'
+                      all: 'Trim All',
+                      vector: 'Vector Join',
+                      array: 'Array Join'
                   };
-                  const currentPhase = current.phase || 'left';
+                  const currentPhase = current.phase || (isTrimProblem ? 'left' : 'vector');
                   return (
                       <div className="card">
                           <div className="text-sm font-semibold mb-2">Current Operation</div>
