@@ -32,7 +32,7 @@ const Visualizer: React.FC<VisualizerProps> = ({ problem }) => {
   }, [input, problem]);
 
   const current = steps[pos] || steps[0];
-  const stringPart = (problem.id === 7 || problem.id === 8) && input.includes('|') ? input.split('|')[0] : input;
+  const stringPart = (problem.id === 7 || problem.id === 8 || problem.id === 19) && input.includes('|') ? input.split('|')[0] : input;
   const charList = (stringPart || '').split('');
 
 
@@ -198,6 +198,18 @@ const Visualizer: React.FC<VisualizerProps> = ({ problem }) => {
     cout << "\\n" << ReverseWordsInString(S1) << endl;
             `;
             break;
+        case 19:
+            const [s1, sToReplace, sReplaceTo] = problem.example.split('|');
+            mainBody = `
+    string S1 = "${s1}";
+    string StringToReplace = "${sToReplace}";
+    string ReplaceTo = "${sReplaceTo}";
+    
+    cout << "\\nOrigial String\\n" << S1;
+    cout << "\\n\\nString After Replace: ";
+    cout << "\\n" << ReplaceWordInStringUsingBuiltInFunction(S1, StringToReplace, ReplaceTo) << endl;
+            `;
+            break;
         default:
             mainBody = `    // TODO: Implement main execution logic for this problem.`;
     }
@@ -277,6 +289,7 @@ ${mainBody}
   const isJoinProblem = problem.id === 16;
   const isJoinOverloadProblem = problem.id === 17;
   const isReverseWordsProblem = problem.id === 18;
+  const isReplaceWordProblem = problem.id === 19;
 
 
   return (
@@ -293,7 +306,7 @@ ${mainBody}
             </button>
         </div>
         <div className="mb-3">
-          <label className="text-xs font-medium">{[16, 17].includes(problem.id) ? 'Delimiter Input:' : 'Input:'}</label>
+          <label className="text-xs font-medium">{[16, 17].includes(problem.id) ? 'Delimiter Input:' : isReplaceWordProblem ? 'Input (String|Find|Replace):' : 'Input:'}</label>
           <input value={input} onChange={e => setInput((problem.id === 5 || problem.id === 9) ? e.target.value.slice(0, 1) : e.target.value)} className="w-full mt-2 p-3 rounded text-lg mono bg-sky-50 border-2 border-cyan-300 focus:border-teal-500 focus:ring focus:ring-teal-200 focus:ring-opacity-50 transition-colors duration-200 ease-in-out" />
           <div className="text-xs text-gray-500 mt-2">{[16, 17].includes(problem.id) ? `Try: "--" or ", "` : `Try: ${problem.example}`}</div>
         </div>
@@ -370,7 +383,7 @@ ${mainBody}
                    </div>
                 ) : (
                   <div className="p-3 border rounded bg-white flex items-center justify-center min-h-[96px]">
-                    <div className="text-2xl font-bold mono p-4">{[12, 13, 14, 15, 18].includes(problem.id) ? input : (charList[0] || '')}</div>
+                    <div className="text-2xl font-bold mono p-4">{[12, 13, 14, 15, 18, 19].includes(problem.id) ? (problem.id === 19 ? input.split('|')[0] : input) : (charList[0] || '')}</div>
                   </div>
                 )}
             </div>
@@ -570,6 +583,37 @@ ${mainBody}
                               <div>
                                   <div className="text-xs text-gray-500">Words Found</div>
                                   <div className="p-2 bg-fuchsia-100 rounded mt-1 font-bold text-lg">{count}</div>
+                              </div>
+                          </div>
+                      </div>
+                  )
+              })()}
+              
+              {isReplaceWordProblem && (() => {
+                  let find = '?', replace = '?', pos = '?';
+                  const parts = input.split('|');
+                  find = parts[1] || '?';
+                  replace = parts[2] || '?';
+                  if (current.mem) {
+                      const memString = current.mem.join('|');
+                      const posMatch = memString.match(/pos\s*=\s*(-?\d+)/);
+                      if (posMatch) pos = posMatch[1];
+                  }
+                  return (
+                      <div className="card">
+                          <div className="text-sm font-semibold mb-2">Live Trace</div>
+                          <div className="space-y-2">
+                              <div>
+                                  <div className="text-xs text-gray-500">Find Word</div>
+                                  <div className="p-2 bg-purple-100 rounded mt-1 font-bold text-base mono">"{find}"</div>
+                              </div>
+                              <div>
+                                  <div className="text-xs text-gray-500">Replace With</div>
+                                  <div className="p-2 bg-emerald-100 rounded mt-1 font-bold text-base mono">"{replace}"</div>
+                              </div>
+                              <div>
+                                  <div className="text-xs text-gray-500">Position (pos)</div>
+                                  <div className="p-2 bg-sky-100 rounded mt-1 font-bold text-base mono">{pos}</div>
                               </div>
                           </div>
                       </div>

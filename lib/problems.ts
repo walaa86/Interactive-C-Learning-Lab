@@ -1333,6 +1333,90 @@ function genReverseWordsSteps(str: string): Step[] {
   return steps;
 }
 
+function genReplaceWordSteps(combinedStr: string): Step[] {
+  const parts = combinedStr.split('|');
+  const S1 = parts[0];
+  const StringToReplace = parts[1];
+  const sRepalceTo = parts[2];
+
+  if (!S1 || !StringToReplace || sRepalceTo === undefined) {
+    return [{ i: -1, code: 'Error', explanation: 'Input must be in the format "Original String|Word to Replace|Replacement Word"', input: combinedStr, mem: [] }];
+  }
+
+  const steps: Step[] = [];
+  let currentS1 = S1;
+  let stepCounter = 0;
+
+  steps.push({
+    i: stepCounter++,
+    code: `// Initial values`,
+    explanation: `Start with the original string. We need to replace all occurrences of "${StringToReplace}" with "${sRepalceTo}".`,
+    input: combinedStr,
+    modified: currentS1,
+    mem: [`S1 = "${currentS1}"`, `find="${StringToReplace}"`, `replace="${sRepalceTo}"`]
+  });
+
+  while (true) {
+    const pos = currentS1.indexOf(StringToReplace);
+    
+    steps.push({
+      i: stepCounter++,
+      code: `short pos = S1.find("${StringToReplace}");`,
+      explanation: `Search for "${StringToReplace}". Found at index: ${pos}. (npos is -1)`,
+      input: combinedStr,
+      modified: currentS1,
+      mem: [`pos = ${pos}`]
+    });
+
+    steps.push({
+      i: stepCounter++,
+      code: `while (pos != std::string::npos)`,
+      explanation: `Check loop condition: ${pos} != -1. Condition is ${pos !== -1 ? 'true, enter loop' : 'false, exit loop'}.`,
+      input: combinedStr,
+      modified: currentS1,
+      mem: [`Continue loop? ${pos !== -1}`]
+    });
+
+    if (pos === -1) {
+      break;
+    }
+
+    const s1BeforeReplace = currentS1;
+    currentS1 = currentS1.substring(0, pos) + sRepalceTo + currentS1.substring(pos + StringToReplace.length);
+    
+    steps.push({
+      i: stepCounter++,
+      code: `S1 = S1.replace(${pos}, ${StringToReplace.length}, "${sRepalceTo}");`,
+      explanation: `Replacing substring at index ${pos}.`,
+      input: combinedStr,
+      modified: currentS1,
+      mem: [`S1 was: "${s1BeforeReplace}"`, `S1 is now: "${currentS1}"`]
+    });
+  }
+
+  steps.push({
+    i: stepCounter++,
+    code: `return S1;`,
+    explanation: `Loop finished because no more occurrences of "${StringToReplace}" were found. Returning the final string.`,
+    input: combinedStr,
+    modified: currentS1,
+    output: [currentS1],
+    mem: [`Final result: "${currentS1}"`]
+  });
+  
+  steps.push({
+    i: stepCounter++,
+    code: 'return 0;',
+    explanation: 'Program finished.',
+    input: combinedStr,
+    modified: currentS1,
+    output: [currentS1],
+    mem: ['Done']
+  });
+
+  return steps;
+}
+
 
 export const problems: Problem[] = [
   { id: 1, title: 'Problem 1 — Print First Letter of Each Word', description: 'Read a string and print the first letter of every word.', example: 'programming is fun', generator: genPrintFirstLettersSteps, functions: [
@@ -1635,5 +1719,21 @@ export const problems: Problem[] = [
       }
     ],
     keyConcepts: ['std::vector', 'vector::iterator', 'Looping Backwards', 'String Tokenizing', 'Function Composition']
+  },
+  {
+    id: 19,
+    title: 'Problem 19 — Replace Word in String',
+    description: 'Read a string, a word to find, and a replacement word, then replace all occurrences of the word.',
+    example: 'Welcome to Jordan , Jordan is a nice country|Jordan|USA',
+    generator: genReplaceWordSteps,
+    functions: [
+        {
+            name: 'ReplaceWordInStringUsingBuiltInFunction',
+            signature: 'string ReplaceWordInString(string S1, string StringToReplace, string sRepalceTo)',
+            explanation: 'Uses a while loop with `string::find` to locate the word to replace. If found, it uses `string::replace` to substitute the new word and then searches again for the next occurrence.',
+            code: `string ReplaceWordInStringUsingBuiltInFunction(string S1, string StringToReplace, string sRepalceTo)\n{\n    short pos = S1.find(StringToReplace);\n    \n    while (pos != std::string::npos)\n    {\n        S1 = S1.replace(pos, StringToReplace.length(), sRepalceTo);\n        pos = S1.find(StringToReplace); //find next\n    }\n    \n    return S1;\n}`
+        }
+    ],
+    keyConcepts: ['string::find', 'string::replace', 'While Loop', 'std::string::npos', 'String Manipulation']
   }
 ];
