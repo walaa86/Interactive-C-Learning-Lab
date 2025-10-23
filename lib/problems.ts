@@ -782,7 +782,8 @@ function genSplitStringSteps(str: string): Step[] {
     explanation: 'Initialize an empty vector to store the words.',
     input: str,
     modified: s1,
-    mem: [`vString=[]`]
+    mem: [],
+    vectorContents: [...vString],
   });
 
   while (true) {
@@ -794,7 +795,8 @@ function genSplitStringSteps(str: string): Step[] {
       explanation: `Search for delimiter " ". Found at index: ${pos}. (npos is -1)`,
       input: str,
       modified: s1,
-      mem: [`pos = ${pos}`, `vString=[${vString.join(',')}]`]
+      mem: [`pos = ${pos}`],
+      vectorContents: [...vString],
     });
     
     steps.push({
@@ -803,7 +805,8 @@ function genSplitStringSteps(str: string): Step[] {
       explanation: `Check loop condition: ${pos} != -1. Condition is ${pos !== -1 ? 'true, enter loop' : 'false, exit loop'}.`,
       input: str,
       modified: s1,
-      mem: [`Continue loop? ${pos !== -1}`, `vString=[${vString.join(',')}]`]
+      mem: [`Continue loop? ${pos !== -1}`],
+      vectorContents: [...vString],
     });
     
     if (pos === -1) {
@@ -817,7 +820,8 @@ function genSplitStringSteps(str: string): Step[] {
       explanation: `Extract word from index 0 up to delimiter. Word is "${sWord}".`,
       input: str,
       modified: s1,
-      mem: [`sWord = "${sWord}"`, `vString=[${vString.join(',')}]`]
+      mem: [`sWord = "${sWord}"`],
+      vectorContents: [...vString],
     });
 
     if (sWord !== "") {
@@ -828,7 +832,8 @@ function genSplitStringSteps(str: string): Step[] {
           explanation: `Word "${sWord}" is not empty. Adding it to the vector.`,
           input: str,
           modified: s1,
-          mem: [`vString=[${vString.join(',')}]`]
+          mem: [],
+          vectorContents: [...vString],
         });
     }
 
@@ -840,7 +845,8 @@ function genSplitStringSteps(str: string): Step[] {
       explanation: `Erase processed part from S1. The string is now shorter.`,
       input: str,
       modified: s1,
-      mem: [`S1 was: "${s1BeforeErase}"`, `S1 is now: "${s1}"`, `vString=[${vString.join(',')}]`]
+      mem: [`S1 was: "${s1BeforeErase}"`, `S1 is now: "${s1}"`],
+      vectorContents: [...vString],
     });
   }
 
@@ -853,7 +859,8 @@ function genSplitStringSteps(str: string): Step[] {
       explanation: `Loop finished. Add the last remaining word "${s1}" to the vector.`,
       input: str,
       modified: s1,
-      mem: [`vString=[${vString.join(',')}]`]
+      mem: [],
+      vectorContents: [...vString],
     });
   } else {
     steps.push({
@@ -862,7 +869,8 @@ function genSplitStringSteps(str: string): Step[] {
       explanation: `Loop finished. No remaining characters to add.`,
       input: str,
       modified: s1,
-      mem: [`S1 is empty.`, `vString=[${vString.join(',')}]`]
+      mem: [`S1 is empty.`],
+      vectorContents: [...vString],
     });
   }
 
@@ -873,7 +881,8 @@ function genSplitStringSteps(str: string): Step[] {
     input: str,
     modified: s1,
     output: vString,
-    mem: [`vString=[${vString.join(',')}]`, `size=${vString.length}`]
+    mem: [`size=${vString.length}`],
+    vectorContents: [...vString],
   });
 
   return steps;
@@ -1234,7 +1243,8 @@ function genReverseWordsSteps(str: string): Step[] {
     explanation: 'Start by splitting the input string into words and storing them in a vector.',
     input: str,
     modified: s1,
-    mem: [`vString=[]`]
+    mem: [],
+    vectorContents: [...vString],
   });
 
   const words = str.split(delim).filter(Boolean);
@@ -1247,7 +1257,8 @@ function genReverseWordsSteps(str: string): Step[] {
       explanation: `Extracted word "${word}" and added it to the vector.`,
       input: str,
       modified: s1,
-      mem: [`vString=[${vString.join(',')}]`]
+      mem: [],
+      vectorContents: [...vString],
     });
   }
 
@@ -1258,7 +1269,8 @@ function genReverseWordsSteps(str: string): Step[] {
     explanation: `The string has been split into ${vString.length} words.`,
     input: str,
     modified: s1,
-    mem: [`vString=[${vString.join(',')}]`]
+    mem: [],
+    vectorContents: [...vString],
   });
 
   // --- Phase 2: Reverse ---
@@ -1270,7 +1282,8 @@ function genReverseWordsSteps(str: string): Step[] {
     explanation: 'Initialize an empty result string `S2` and an iterator pointing to the end of the vector.',
     input: str,
     modified: S2,
-    mem: [`S2 = ""`, `iterator at end`, `vString=[${vString.join(',')}]`]
+    mem: [`S2 = ""`, `iterator at end`],
+    vectorContents: [...vString],
   });
 
   for (let i = vString.length - 1; i >= 0; i--) {
@@ -1282,7 +1295,8 @@ function genReverseWordsSteps(str: string): Step[] {
       explanation: `Decrement iterator. It now points to the word "${word}".`,
       input: str,
       modified: S2,
-      mem: [`iterator at index ${i}`, `vString=[${vString.join(',')}]`]
+      mem: [`iterator at index ${i}`],
+      vectorContents: [...vString],
     });
 
     const s2Before = S2;
@@ -1294,7 +1308,8 @@ function genReverseWordsSteps(str: string): Step[] {
       explanation: `Append the word "${word}" and a space to the result string S2.`,
       input: str,
       modified: S2,
-      mem: [`S2 was: "${s2Before}"`, `S2 is now: "${S2}"`, `vString=[${vString.join(',')}]`]
+      mem: [`S2 was: "${s2Before}"`, `S2 is now: "${S2}"`],
+      vectorContents: [...vString],
     });
   }
   
@@ -1305,7 +1320,8 @@ function genReverseWordsSteps(str: string): Step[] {
       explanation: 'The reverse loop has finished. The string now has an extra space at the end.',
       input: str,
       modified: S2,
-      mem: [`Final looped string: "${S2}"`, `vString=[${vString.join(',')}]`]
+      mem: [`Final looped string: "${S2}"`],
+      vectorContents: [...vString],
   });
 
   const finalString = S2.trim();
@@ -1317,7 +1333,8 @@ function genReverseWordsSteps(str: string): Step[] {
       input: str,
       modified: finalString,
       output: [finalString],
-      mem: [`Final result: "${finalString}"`, `vString=[${vString.join(',')}]`]
+      mem: [`Final result: "${finalString}"`],
+      vectorContents: [...vString],
   });
 
   steps.push({
@@ -1327,7 +1344,8 @@ function genReverseWordsSteps(str: string): Step[] {
     input: str,
     modified: finalString,
     output: [finalString],
-    mem: ['Done']
+    mem: ['Done'],
+    vectorContents: [...vString],
   });
 
   return steps;
@@ -1585,7 +1603,8 @@ function genLineToStructSteps(line: string): Step[] {
         explanation: 'Start by splitting the input line into tokens using the SplitString function.',
         input: line,
         modified: s1,
-        mem: [`vString=[]`]
+        mem: [],
+        vectorContents: [...vString],
     });
 
     while (s1.includes(separator)) {
@@ -1599,7 +1618,8 @@ function genLineToStructSteps(line: string): Step[] {
             explanation: `Found token "${sWord}" and added it to the vector.`,
             input: line,
             modified: s1.substring(pos + separator.length),
-            mem: [`vString=[${vString.join(',')}]`]
+            mem: [],
+            vectorContents: [...vString],
         });
         s1 = s1.substring(pos + separator.length);
     }
@@ -1612,7 +1632,8 @@ function genLineToStructSteps(line: string): Step[] {
         explanation: `The line has been split into ${vString.length} tokens.`,
         input: line,
         modified: '',
-        mem: [`vString=[${vString.join(',')}]`]
+        mem: [],
+        vectorContents: [...vString],
     });
 
     // --- Phase 2: Assign Vector elements to Struct fields ---
@@ -1626,7 +1647,8 @@ function genLineToStructSteps(line: string): Step[] {
         explanation: 'An empty sClient struct is created in memory.',
         input: line,
         modified: '',
-        mem: [`Client struct is empty`, `vString=[${vString.join(',')}]`]
+        mem: [`Client struct is empty`],
+        vectorContents: [...vString],
     });
 
     for (let i = 0; i < fields.length; i++) {
@@ -1648,7 +1670,8 @@ function genLineToStructSteps(line: string): Step[] {
             explanation: explanation,
             input: line,
             modified: value,
-            mem: [`Client.${fieldName} = ${Client[fieldName]}`, `vString=[${vString.join(',')}]`]
+            mem: [`Client.${fieldName} = ${Client[fieldName]}`],
+            vectorContents: [...vString],
         });
     }
 
@@ -1662,23 +1685,24 @@ function genLineToStructSteps(line: string): Step[] {
         input: line,
         modified: '',
         output: [],
-        mem: [`Client is fully populated.`]
+        mem: [`Client is fully populated.`],
+        vectorContents: [...vString],
     });
     
     finalOutput.push(`Accout Number: ${Client.AccountNumber}`);
-    steps.push({ i: -1, phase: 'print', field: 'AccountNumber', code: `cout << Client.AccountNumber;`, explanation: `Printing AccountNumber.`, input: line, output: [...finalOutput], mem: [] });
+    steps.push({ i: -1, phase: 'print', field: 'AccountNumber', code: `cout << Client.AccountNumber;`, explanation: `Printing AccountNumber.`, input: line, output: [...finalOutput], mem: [], vectorContents: [...vString] });
     
     finalOutput.push(`Pin Code: ${Client.PinCode}`);
-    steps.push({ i: -1, phase: 'print', field: 'PinCode', code: `cout << Client.PinCode;`, explanation: `Printing PinCode.`, input: line, output: [...finalOutput], mem: [] });
+    steps.push({ i: -1, phase: 'print', field: 'PinCode', code: `cout << Client.PinCode;`, explanation: `Printing PinCode.`, input: line, output: [...finalOutput], mem: [], vectorContents: [...vString] });
     
     finalOutput.push(`Name: ${Client.Name}`);
-    steps.push({ i: -1, phase: 'print', field: 'Name', code: `cout << Client.Name;`, explanation: `Printing Name.`, input: line, output: [...finalOutput], mem: [] });
+    steps.push({ i: -1, phase: 'print', field: 'Name', code: `cout << Client.Name;`, explanation: `Printing Name.`, input: line, output: [...finalOutput], mem: [], vectorContents: [...vString] });
 
     finalOutput.push(`Phone: ${Client.Phone}`);
-    steps.push({ i: -1, phase: 'print', field: 'Phone', code: `cout << Client.Phone;`, explanation: `Printing Phone.`, input: line, output: [...finalOutput], mem: [] });
+    steps.push({ i: -1, phase: 'print', field: 'Phone', code: `cout << Client.Phone;`, explanation: `Printing Phone.`, input: line, output: [...finalOutput], mem: [], vectorContents: [...vString] });
 
     finalOutput.push(`Account Balance: ${Client.AccountBalance}`);
-    steps.push({ i: -1, phase: 'print', field: 'AccountBalance', code: `cout << Client.AccountBalance;`, explanation: `Printing AccountBalance.`, input: line, output: [...finalOutput], mem: [] });
+    steps.push({ i: -1, phase: 'print', field: 'AccountBalance', code: `cout << Client.AccountBalance;`, explanation: `Printing AccountBalance.`, input: line, output: [...finalOutput], mem: [], vectorContents: [...vString] });
 
     steps.push({
         i: -1,
@@ -1686,7 +1710,8 @@ function genLineToStructSteps(line: string): Step[] {
         explanation: 'Program finished.',
         input: line,
         output: [...finalOutput],
-        mem: ['Done']
+        mem: ['Done'],
+        vectorContents: [...vString],
       });
 
     return steps;

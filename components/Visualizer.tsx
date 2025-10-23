@@ -72,10 +72,8 @@ const Visualizer: React.FC<VisualizerProps> = ({ problem }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [input, problem]);
 
-  // DERIVED STATE: This is the core of the fix.
-  // Instead of adding/removing memory items imperatively, we now derive the
-  // entire memory state from the `steps` and current `pos`. This guarantees
-  // that the memory log is always consistent with the execution step.
+  // DERIVED STATE for Simulated Memory
+  // The memory log is always consistent with the execution step.
   useEffect(() => {
     if (steps.length === 0) {
       setMemory([]);
@@ -96,6 +94,22 @@ const Visualizer: React.FC<VisualizerProps> = ({ problem }) => {
     setMemory(newMemory);
   }, [pos, steps]);
   
+  // DERIVED STATE for Paper & Pen notes.
+  // This ensures the notes are always in sync with the current step.
+  useEffect(() => {
+    if (!paper) {
+      if (notes.length > 0) setNotes([]); // Clear notes if paper is turned off.
+      return;
+    }
+
+    const relevantSteps = steps.slice(0, pos + 1);
+    const newNotes = relevantSteps.flatMap((step, index) => 
+      step.mem?.map(m => `[step ${index + 1}] ${m}`) ?? []
+    );
+    setNotes(newNotes);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pos, steps, paper]);
+
   const current = steps[pos] || steps[0];
   const prevStep = pos > 0 ? steps[pos - 1] : null;
   const stringPart = (problem.id === 7 || problem.id === 8 || problem.id === 19) && input.includes('|') ? input.split('|')[0] : input;
@@ -116,988 +130,246 @@ const Visualizer: React.FC<VisualizerProps> = ({ problem }) => {
     if (problem.functions.some(f => f.code.includes('setw'))) {
       headers.add('iomanip');
     }
+    if (problem.functions.some(f => f.code.includes('toupper') || f.code.includes('tolower') || f.code.includes('isupper') || f.code.includes('islower') || f.code.includes('ispunct'))) {
+      headers.add('cctype');
+    }
+
 
     const headerIncludes = Array.from(headers).map(h => `#include <${h}>`).join('\n');
     const functionDefinitions = problem.functions.map(f => f.code).join('\n\n');
 
     let mainBody = '';
-    const readStringFn = problem.functions.find(f => f.name === 'ReadString');
-    const readCharFn = problem.functions.find(f => f.name === 'ReadChar');
+    const readStringFn = problem.functions.find(f => f.name === 'ReadString()');
+    const readCharFn = problem.functions.find(f => f.name === 'ReadChar()');
 
     switch(problem.id) {
-        case 1:
-            mainBody = `
-    cout << "Enter a string: " << endl;
-    string s = ${readStringFn ? readStringFn.name + "();" : "/* Read string logic here */"}
-    cout << "\\nFirst letters: ";
-    PrintFirstLetterOfEachWord(s);
-    cout << endl;
-            `;
-            break;
-        case 2:
-        case 3:
-            mainBody = `
-    cout << "Enter a string: " << endl;
-    string s = ${readStringFn ? readStringFn.name + "();" : "/* Read string logic here */"}
-    string result = ${problem.functions.find(f => f.name.includes('FirstLetter'))?.name}(s);
-    cout << "\\nResult: " << result << endl;
-            `;
-            break;
-        case 4:
-            mainBody = `
-    cout << "Enter a string: " << endl;
-    string s = ${readStringFn ? readStringFn.name + "();" : "/* Read string logic here */"}
-    string upper_s = UpperAllString(s);
-    cout << "\\nUppercase version: " << upper_s << endl;
-    string lower_s = LowerAllString(s);
-    cout << "\\nLowercase version: " << lower_s << endl;
-            `;
-            break;
-        case 5:
-            mainBody = `
-    char c = ${readCharFn ? readCharFn.name + "();" : "/* Read char logic here */"}
-    char inverted_c = InvertLetterCase(c);
-    cout << "\\nInverted case: " << inverted_c << endl;
-            `;
-            break;
-        case 6:
-            mainBody = `
-    string s = ${readStringFn ? readStringFn.name + "();" : "/* Read string logic here */"}
-    cout << "\\nCapital Letters Count = " << CountCapitalLetters(s) << endl;
-    cout << "Small Letters Count = " << CountSmallLetters(s) << endl;
-            `;
-            break;
-        case 7:
-            mainBody = `
-    string s = ${readStringFn ? readStringFn.name + "();" : "/* Read string logic here */"}
-    char c = ${readCharFn ? readCharFn.name + "();" : "/* Read char logic here */"}
-    cout << "\\nLetter '" << c << "' Count = " << CountLetter(s, c) << endl;
-            `;
-            break;
-        case 8:
-            mainBody = `
-    string s = ${readStringFn ? readStringFn.name + "();" : "/* Read string logic here */"}
-    char c = ${readCharFn ? readCharFn.name + "();" : "/* Read char logic here */"}
-    
-    cout << "\\nLetter '" << c << "' Count = " << CountLetter(s, c);
-    
-    cout << "\\nLetter '" << c << "' or '" << InvertLetterCase(c) << "' Count = " << CountLetter(s, c, false) << endl;
-            `;
-            break;
-        case 9:
-            mainBody = `
-    char c = ${readCharFn ? readCharFn.name + "();" : "/* Read char logic here */"}
-    
-    if (IsVowel(c))
-        cout << "\\nYES Letter '" << c << "' is vowel";
-    else
-        cout << "\\nNO Letter '" << c << "' is NOT vowel";
-    
-    cout << endl;
-            `;
-            break;
-        case 10:
-            mainBody = `
-    string S1 = ${readStringFn ? readStringFn.name + "();" : "/* Read string logic here */"}
-    cout << "\\nNumber of vowels is: " << CountVowels(S1) << endl;
-            `;
-            break;
-        case 11:
-            mainBody = `
-    string S1 = ${readStringFn ? readStringFn.name + "();" : "/* Read string logic here */"}
-    PrintVowels(S1);
-    cout << endl;
-            `;
-            break;
-        case 12:
-            mainBody = `
-    PrintEachWordInString(${readStringFn ? readStringFn.name + "()" : "/* Read string logic here */"});
-            `;
-            break;
-        case 13:
-            mainBody = `
-    string S1 = ${readStringFn ? readStringFn.name + "();" : "/* Read string logic here */"}
-    cout << "\\nThe number of words in your string is: " << CountWords(S1) << endl;
-            `;
-            break;
-        case 14:
-            mainBody = `
-    vector<string> vString;
-    vString = SplitString(${readStringFn ? readStringFn.name + "()" : "/* Read string logic here */"}, " ");
-    
-    cout << "\\nTokens = " << vString.size() << endl;
-    
-    for (string& s : vString)
-    {
-        cout << s << endl;
-    }
-            `;
-            break;
-        case 15:
-            mainBody = `
-    string S1 = "${problem.example}";
-    
-    cout << "\\nString     = " << S1;
-    cout << "\\n\\nTrim Left  = " << TrimLeft(S1);
-    cout << "\\nTrim Right = " << TrimRight(S1);
-    cout << "\\nTrim       = " << Trim(S1) << endl;
-            `;
-            break;
-        case 16:
-            mainBody = `
-    vector<string> vString = { "Mohammed", "Faid", "Ali", "Maher" };
-    
-    cout << "\\nVector after join with delimiter \\"${problem.example}\\":\\n";
-    cout << JoinString(vString, "${problem.example}") << endl;
-            `;
-            break;
-        case 17:
-            mainBody = `
-    vector<string> vString = { "Mohammed", "Faid", "Ali", "Maher" };
-    string arrString[] = { "Mohammed", "Faid", "Ali", "Maher" };
-    
-    cout << "\\nVector after join: \\n";
-    cout << JoinString(vString, "${problem.example}");
-    
-    cout << "\\n\\nArray after join: \\n";
-    cout << JoinString(arrString, 4, "${problem.example}") << endl;
-            `;
-            break;
-        case 18:
-            mainBody = `
-    string S1 = ${readStringFn ? readStringFn.name + "();" : "/* Read string logic here */"}
-    cout << "\\nString after reversing words:";
-    cout << "\\n" << ReverseWordsInString(S1) << endl;
-            `;
-            break;
-        case 19:
-            const [s1, sToReplace, sReplaceTo] = problem.example.split('|');
-            mainBody = `
-    string S1 = "${s1}";
-    string StringToReplace = "${sToReplace}";
-    string ReplaceTo = "${sReplaceTo}";
-    
-    cout << "\\nOrigial String\\n" << S1;
-    cout << "\\n\\nString After Replace: ";
-    cout << "\\n" << ReplaceWordInStringUsingBuiltInFunction(S1, StringToReplace, ReplaceTo) << endl;
-            `;
-            break;
-        case 20:
-            mainBody = `
-    string S1 = "${problem.example}";
-    
-    cout << "\\nOrigial String:\\n" << S1;
-    
-    cout << "\\n\\nString after remove punctuations: \\n";
-    cout << RemovePunctuationsFromString(S1) << endl;
-            `;
-            break;
-        case 21:
-            mainBody = `
-    sClient Client;
-    Client.AccountNumber = "A1234";
-    Client.PinCode = "5678";
-    Client.Name = "Mohammed Abu-Hadhoud";
-    Client.Phone = "079000000";
-    Client.AccountBalance = 5124.88;
-    
-    cout << "\\nClient Record for Saving is: \\n";
-    cout << ConvertRecordToLine(Client, "${input}") << endl;
-            `;
-            break;
-        case 22:
-            mainBody = `
-    string stLine = "${input}";
-    
-    cout << "\\nLine Record is:\\n";
-    cout << stLine;
-    
-    sClient Client = ConvertLinetoRecord(stLine);
-    
-    PrintClientRecord(Client);
-    cout << endl;
-            `;
-            break;
-        case 23:
-            mainBody = `
-    const string ClientsFileName = "Clients.txt";
-    AddClients();
-            `;
-            break;
-        case 24:
-            mainBody = `
-    const string ClientsFileName = "Clients.txt";
-    // NOTE: This program assumes Clients.txt exists and has data.
-    // You may need to run Problem 23 first to create the file.
-    
-    vector<sClient> vClients = LoadCleintsDataFromFile(ClientsFileName);
-    
-    PrintAllClientsData(vClients);
-            `;
-            break;
-        case 25:
-            mainBody = `
-    const string ClientsFileName = "Clients.txt";
-    sClient Client;
-    string AccountNumber = ReadClientAccountNumber();
-    
-    if (FindClientByAccountNumber(AccountNumber, Client))
-    {
-        PrintClientCard(Client);
-    }
-    else
-    {
-        cout << "\\nClient with Account Number (" << AccountNumber << ") is Not Found!";
-    }
-    cout << endl;
-            `;
-            break;
-        case 26:
-             mainBody = `
-    const string ClientsFileName = "Clients.txt";
-    vector<sClient> vClients = LoadCleintsDataFromFile(ClientsFileName);
-    string AccountNumber = ReadClientAccountNumber();
-    
-    DeleteClientByAccountNumber(AccountNumber, vClients);
-    cout << endl;
-            `;
-            break;
-        case 27:
-             mainBody = `
-    const string ClientsFileName = "Clients.txt";
-    vector<sClient> vClients = LoadCleintsDataFromFile(ClientsFileName);
-    string AccountNumber = ReadClientAccountNumber();
-    
-    UpdateClientByAccountNumber(AccountNumber, vClients);
-    cout << endl;
-            `;
-            break;
-        default:
-            mainBody = `    // TODO: Implement main execution logic for this problem.`;
+        case 1: mainBody = `    string s = "${input}";\n    PrintFirstLetterOfEachWord(s);\n    cout << endl;`; break;
+        case 2: mainBody = `    string s = "${input}";\n    cout << UpperFirstLetterOfEachWord(s) << endl;`; break;
+        case 3: mainBody = `    string s = "${input}";\n    cout << LowerFirstLetterOfEachWord(s) << endl;`; break;
+        case 4: mainBody = `    string s = "${input}";\n    cout << "Upper: " << UpperAllString(s) << endl;\n    cout << "Lower: " << LowerAllString(s) << endl;`; break;
+        case 5: mainBody = `    char ch = '${input[0]}';\n    cout << InvertLetterCase(ch) << endl;`; break;
+        case 6: mainBody = `    string s = "${input}";\n    cout << "Capitals: " << CountCapitalLetters(s) << endl;\n    cout << "Smalls: " << CountSmallLetters(s) << endl;`; break;
+        case 7: { const [s, l] = input.split('|'); mainBody = `    cout << CountLetter("${s}", '${l}') << endl;`; break; }
+        case 8: { const [s, l] = input.split('|'); mainBody = `    cout << "Sensitive: " << CountLetter("${s}", '${l}', true) << endl;\n    cout << "Insensitive: " << CountLetter("${s}", '${l}', false) << endl;`; break; }
+        case 9: mainBody = `    cout << (IsVowel('${input[0]}') ? "Is Vowel" : "Not a Vowel") << endl;`; break;
+        case 10: mainBody = `    cout << "Vowels: " << CountVowels("${input}") << endl;`; break;
+        case 11: mainBody = `    PrintVowels("${input}");`; break;
+        case 12: mainBody = `    PrintEachWordInString("${input}");`; break;
+        case 13: mainBody = `    cout << "Words: " << CountWords("${input}") << endl;`; break;
+        case 14: mainBody = `    vector<string> v = SplitString("${input}", " ");\n    cout << "Vector size: " << v.size() << endl;`; break;
+        case 15: mainBody = `    string s = "${input}";\n    cout << "TrimLeft: '" << TrimLeft(s) << "'" << endl;\n    cout << "TrimRight: '" << TrimRight(s) << "'" << endl;\n    cout << "Trim: '" << Trim(s) << "'" << endl;`; break;
+        case 16: mainBody = `    vector<string> v = {"Mohammed", "Faid", "Ali"};\n    cout << JoinString(v, "${input || ' '}") << endl;`; break;
+        case 17: mainBody = `    vector<string> v = {"Mohammed", "Faid", "Ali"};\n    string arr[] = {"Mohammed", "Faid", "Ali"};\n    cout << "From Vector: " << JoinString(v, "${input || ' '}") << endl;\n    cout << "From Array: " << JoinString(arr, 3, "${input || ' '}") << endl;`; break;
+        case 18: mainBody = `    cout << ReverseWordsInString("${input}") << endl;`; break;
+        case 19: { const [s, f, r] = input.split('|'); mainBody = `    cout << ReplaceWordInStringUsingBuiltInFunction("${s}", "${f}", "${r}") << endl;`; break; }
+        case 20: mainBody = `    cout << RemovePunctuationsFromString("${input}") << endl;`; break;
+        case 21: mainBody = `    sClient Client = {"A123", "1234", "John Doe", "555-1234", 5000.0};\n    cout << ConvertRecordToLine(Client, "${input || '#//# '}") << endl;`; break;
+        case 22: mainBody = `    sClient Client = ConvertLinetoRecord("${input}", "#//#");\n    PrintClientRecord(Client);`; break;
+        case 23: mainBody = `    cout << "Simulating adding clients to file..." << endl;\n    AddClients();`; break;
+        case 24: mainBody = `    vector<sClient> v = LoadCleintsDataFromFile("Clients.txt");\n    PrintAllClientsData(v);`; break;
+        case 25: mainBody = `    sClient Client;\n    if (FindClientByAccountNumber("${input}", Client)) {\n        PrintClientCard(Client);\n    } else {\n        cout << "Client not found." << endl;\n    }`; break;
+        case 26: mainBody = `    vector<sClient> v = LoadCleintsDataFromFile("Clients.txt");\n    DeleteClientByAccountNumber("${input}", v);`; break;
+        case 27: mainBody = `    vector<sClient> v = LoadCleintsDataFromFile("Clients.txt");\n    UpdateClientByAccountNumber("${input}", v);`; break;
+        default: mainBody = `    // Main function body for problem ${problem.id}\n    cout << "Executing problem ${problem.id}..." << endl;`; break;
     }
 
-    return `// Problem ${problem.id}: ${problem.title.split('—')[1].trim()}
-// Description: ${problem.description}
-// Generated by the Interactive C++ Learning Lab
-
-${headerIncludes}
-#include <cctype> // for isupper, toupper, tolower, ispunct
-
-using namespace std;
-
-// Function Definitions
-${functionDefinitions}
-
-int main()
-{
-${mainBody}
-    return 0;
-}
-`;
+    return `${headerIncludes}\n\nusing namespace std;\n\n${functionDefinitions}\n\nint main() {\n${mainBody}\n    return 0;\n}`;
   };
 
-  const handleDownload = () => {
-    const code = generateCppCode();
-    const blob = new Blob([code], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `problem_${problem.id}_${problem.title.split('—')[1].trim().replace(/\s+/g, '_')}.cpp`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-
-  // Simplified navigation functions. They only need to change the position.
-  // The useEffect hook will take care of updating the memory state.
-  const goNext = () => {
-    if (pos < steps.length - 1) {
-      const newPos = pos + 1;
-      const nextStep = steps[newPos];
-      if (paper && nextStep?.mem.length) {
-        setNotes(n => [...n, ...nextStep.mem.map(m => `[step ${newPos + 1}] ${m}`)]);
-      }
-      setPos(newPos);
-    }
-  };
-
-  const goPrev = () => {
-    if (pos > 0) {
-      setPos(p => p - 1);
-    }
-  };
-
-  const revealNextHint = () => {
-    if (problem.hints && revealedHints.length < problem.hints.length) {
-      setRevealedHints(prev => [...prev, prev.length]);
-    }
-  };
-
-  const isFirstLetterFlag = current?.mem?.find(m => m.includes('isFirst'));
-  const isIndexedLoopProblem = [1, 2, 3, 4, 6, 7, 8, 10, 11, 20].includes(problem.id);
-  const isCounterProblem = problem.id === 6;
-  const isSpecificCounterProblem = problem.id === 7;
-  const isCaseInsensitiveCounterProblem = problem.id === 8;
-  const isVowelCounterProblem = problem.id === 10;
-  const isWordCounterProblem = problem.id === 13;
-  const isVectorProblem = [14, 22, 24, 25, 26, 27].includes(problem.id);
-  const isTrimProblem = problem.id === 15;
-  const isJoinProblem = problem.id === 16;
-  const isJoinOverloadProblem = problem.id === 17;
-  const isReverseWordsProblem = problem.id === 18;
-  const isReplaceWordProblem = problem.id === 19;
-  const isStructToLineProblem = problem.id === 21;
-  const isLineToStructProblem = problem.id === 22;
-  const isAddClientsProblem = problem.id === 23;
-  const isLoadClientsProblem = problem.id === 24;
-  const isFindClientProblem = problem.id === 25;
-  const isDeleteClientProblem = problem.id === 26;
-  const isUpdateClientProblem = problem.id === 27;
-  
-  const isFileBasedProblem = [23, 24, 25, 26, 27].includes(problem.id);
-
-  const fixedClientData = {
-    AccountNumber: "A1234",
-    PinCode: "5678",
-    Name: "Mohammed Abu-Hadhoud",
-    Phone: "079000000",
-    AccountBalance: 5124.88
-  };
-
-  // Animation helpers
-  const isConditional = current && /condition is|result is|match:|is it|checking if/i.test(current.explanation);
-  const isTrue = current && /true|yes|match found/i.test(current.explanation);
-  let conditionalClass = '';
-  if (isConditional) {
-      conditionalClass = isTrue ? 'shadow-lg shadow-green-500/20' : 'shadow-lg shadow-red-500/20';
-  }
-
-  const prevModified = prevStep?.modified ?? '';
-  const currentModified = current?.modified ?? '';
-  const modifiedChars = currentModified.split('').map((char, index) => {
-    const isChanged = char !== prevModified[index] || index >= prevModified.length;
-    return (
-      <span key={index} className={isChanged && pos > 0 ? 'char-changed' : ''}>{char}</span>
-    );
-  });
-
-  const extractValue = (step: Step | null, regex: RegExp, defaultValue: string = '0'): string => {
-    if (!step?.mem) return defaultValue;
-    const memString = step.mem.join('|');
-    const matches = memString.match(regex);
-    if (matches && matches.length > 0) return matches[matches.length - 1];
-    return defaultValue;
-  }
-  
-  if (!current) {
-    return (
-        <div className="card">
-            <div className="p-8 text-center">
-                <h3 className="text-lg font-semibold text-slate-700">Loading Visualization...</h3>
-                <p className="text-sm text-gray-500">Please wait or try resetting.</p>
-                 <button onClick={doReset} className="mt-4 px-3 py-2 bg-orange-500 text-white rounded flex items-center gap-2 hover:bg-orange-600 transition-colors mx-auto"><Icon name="refresh-ccw" /> Reset</button>
-            </div>
-        </div>
-    );
-  }
+  const isStringModificationProblem = [2, 3, 4, 5, 15, 18, 19, 20, 21].includes(problem.id);
+  const isVowelProblem = [9, 10, 11].includes(problem.id);
+  const isCaseCountProblem = [6].includes(problem.id);
+  const isLetterCountProblem = [7, 8].includes(problem.id);
+  const isWordProblem = [12, 13].includes(problem.id);
+  const isVectorProblem = [14, 18, 22, 24, 25, 26, 27].includes(problem.id);
+  const isJoinProblem = [16, 17].includes(problem.id);
+  const isStructLineProblem = [21, 22].includes(problem.id);
+  const isFileProblem = [23, 24, 26, 27].includes(problem.id);
+  const isClientSearchProblem = [25].includes(problem.id);
+  const isClientDeleteProblem = [26].includes(problem.id);
+  const isClientUpdateProblem = [27].includes(problem.id);
 
   return (
-    <div className="card">
-      <h2 className="text-xl font-bold">{problem.title}</h2>
-      <p className="text-sm text-gray-600 mt-1">{problem.description}</p>
-
-      {problem.hints && problem.hints.length > 0 && (
-        <div className="card mt-4 bg-sky-50">
-          <h3 className="text-sm font-semibold mb-2 flex items-center gap-2">
-            <Icon name="lightbulb" />
-            Hints
-          </h3>
-          <div className="space-y-2">
-            {revealedHints.map((hintIndex) => (
-              <div key={hintIndex} className="paper text-sm p-3 item-enter bg-white">
-                <strong>Hint {hintIndex + 1}:</strong> {problem.hints?.[hintIndex]}
-              </div>
-            ))}
+    <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+      {/* Left Column */}
+      <div className="lg:col-span-2 space-y-4">
+        <div className="card">
+          <h2 className="text-xl font-bold mb-2">{problem.title}</h2>
+          <p className="text-sm text-gray-600 mb-3">{problem.description}</p>
+          <div className="flex flex-wrap gap-2">
+            {problem.keyConcepts.map(c => <span key={c} className="pill text-xs">{c}</span>)}
           </div>
-          {revealedHints.length < (problem.hints?.length || 0) && (
-            <button
-              onClick={revealNextHint}
-              className="mt-3 flex items-center gap-2 px-3 py-1.5 text-xs bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors font-semibold disabled:bg-amber-300"
-              disabled={revealedHints.length >= (problem.hints?.length || 0)}
-            >
-              <Icon name="sparkles" size={14} />
-              Show a Hint
-            </button>
-          )}
         </div>
-      )}
+        <div>
+          <h3 className="text-lg font-bold mb-2 text-slate-600">Functions Involved</h3>
+          {problem.functions.map(f => <FunctionCard key={f.name} f={f} />)}
+        </div>
+        {problem.hints && (
+          <div>
+            <h3 className="text-lg font-bold mb-2 text-slate-600">Hints</h3>
+            <div className="space-y-2">
+              {problem.hints.map((hint, i) => (
+                <div key={i} className="card p-3">
+                  {revealedHints.includes(i) ? (
+                    <p className="text-sm text-gray-700">{hint}</p>
+                  ) : (
+                    <button onClick={() => setRevealedHints(prev => [...prev, i])} className="flex items-center gap-2 text-sm font-semibold text-teal-600 hover:text-teal-700">
+                      <Icon name="lightbulb" size={16} />
+                      <span>Reveal Hint {i + 1}</span>
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
 
-      <div className="mt-4 card">
-        <div className="flex items-center justify-between mb-2">
-            <div className="text-sm font-semibold flex items-center gap-2"><Icon name="brain-circuit" /> Live Trace Execution</div>
-            <button onClick={handleDownload} className="flex items-center gap-2 px-3 py-1.5 text-xs bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors font-semibold">
-                <Icon name="download" size={14} />
-                Download .cpp
+      {/* Right Column */}
+      <div className="lg:col-span-3 space-y-4">
+        <div className="card">
+          <div className="flex flex-col sm:flex-row gap-4">
+            <input type="text" value={input} onChange={(e) => setInput(e.target.value)} className="flex-grow p-2 border rounded-lg focus:ring-2 focus:ring-teal-400 transition" />
+            <button onClick={doReset} className="px-4 py-2 bg-teal-500 text-white font-semibold rounded-lg hover:bg-teal-600 transition flex items-center justify-center gap-2">
+              <Icon name="refresh-cw" size={16} />
+              <span>Visualize</span>
             </button>
-        </div>
-        <div className="mb-3">
-          <label className="text-xs font-medium">{isStructToLineProblem ? 'Separator:' : [16, 17].includes(problem.id) ? 'Delimiter Input:' : isReplaceWordProblem ? 'Input (String|Find|Replace):' : (isFindClientProblem || isDeleteClientProblem || isUpdateClientProblem) ? 'Account Number to Find/Delete/Update:' : 'Input:'}</label>
-          <input 
-            value={input} 
-            onChange={e => setInput((problem.id === 5 || problem.id === 9) ? e.target.value.slice(0, 1) : e.target.value)} 
-            className="w-full mt-2 p-3 rounded text-lg mono bg-sky-50 border-2 border-cyan-300 focus:border-teal-500 focus:ring focus:ring-teal-200 focus:ring-opacity-50 transition-colors duration-200 ease-in-out"
-            disabled={isAddClientsProblem || isLoadClientsProblem}
-          />
-          <div className="text-xs text-gray-500 mt-2">{isStructToLineProblem ? 'This separator is used to join the struct fields. The client data is fixed for this visualization.' : [16, 17].includes(problem.id) ? `Try: "--" or ", "` : `Try: ${problem.example}`}</div>
-        </div>
-
-        <div className="flex flex-col sm:flex-row items-center justify-between mb-4 gap-2">
-          <div className="pill">Step {pos + 1} of {steps.length}</div>
-          <div className="flex gap-2">
-            <button onClick={goPrev} disabled={pos === 0} className="px-3 py-2 bg-slate-200 rounded flex items-center gap-2 disabled:opacity-50 hover:bg-slate-300 transition-colors"><Icon name="skip-back" /> Prev</button>
-            <button onClick={goNext} disabled={pos === steps.length - 1} className="px-3 py-2 bg-teal-500 text-white rounded flex items-center gap-2 disabled:opacity-50 hover:bg-teal-600 transition-colors"><Icon name="play" /> Next</button>
-            <button onClick={doReset} className="px-3 py-2 bg-orange-500 text-white rounded flex items-center gap-2 hover:bg-orange-600 transition-colors"><Icon name="refresh-ccw" /> Reset</button>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div className="lg:col-span-2">
+        <div className="card flex items-center justify-between">
+          <button onClick={() => setPos(p => Math.max(0, p - 1))} disabled={pos === 0} className="px-4 py-2 bg-gray-200 rounded-lg disabled:opacity-50 flex items-center gap-2 font-semibold">
+            <Icon name="arrow-left" size={16} /> Prev
+          </button>
+          <span className="text-sm text-gray-600 font-semibold">Step {pos + 1} of {steps.length}</span>
+          <button onClick={() => setPos(p => Math.min(steps.length - 1, p + 1))} disabled={pos >= steps.length - 1} className="px-4 py-2 bg-gray-200 rounded-lg disabled:opacity-50 flex items-center gap-2 font-semibold">
+            Next <Icon name="arrow-right" size={16} />
+          </button>
+        </div>
+
+        {/* --- VISUALIZATION AREA --- */}
+        <div className="card">
+            {/* String Visualizer */}
             <div className="mb-4">
-              <div className="text-sm font-semibold mb-2">{isJoinProblem || isJoinOverloadProblem ? 'Input Collections (Fixed)' : isStructToLineProblem ? 'Client Data (Fixed sClient Struct)' : isFileBasedProblem ? 'Simulation Status' : 'Original Input (Read-Only)'}</div>
-               {isIndexedLoopProblem ? (
-                  <div className="p-3 border rounded bg-white overflow-x-auto">
-                    <table className="w-full border-collapse">
-                      <thead>
-                        <tr>
-                          <th className="index-cell">Index</th>
-                          {charList.map((_, i) => (<th key={i} className={`index-cell ${i === current.i ? 'yellow' : ''}`}>{i}</th>))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr>
-                          <td className="index-cell font-semibold">Char</td>
-                          {charList.map((ch, i) => (<td key={i} className={`char-cell ${i === current.i ? 'yellow' : ''}`}>{ch === ' ' ? '␣' : ch}</td>))}
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                ) : isJoinProblem ? (
-                  <div className="p-3 border rounded bg-white flex flex-wrap items-center justify-center gap-2 min-h-[96px]">
-                    <span className="mono text-xl">{'{'}</span>
-                    {["Mohammed", "Faid", "Ali", "Maher"].map((item, idx) => (
-                      <React.Fragment key={idx}>
-                        <span className="p-2 bg-sky-100 rounded text-lg mono">"{item}"</span>
-                        {idx < 3 && <span className="text-gray-400">,</span>}
-                      </React.Fragment>
-                    ))}
-                    <span className="mono text-xl">{'}'}</span>
-                  </div>
-                ) : isJoinOverloadProblem ? (
-                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                     <div className="p-3 border rounded bg-white">
-                       <div className="text-xs font-semibold text-center mb-2">std::vector&lt;string&gt;</div>
-                       <div className="flex flex-wrap items-center justify-center gap-1">
-                          <span className="mono text-lg">{'{'}</span>
-                          {["Mohammed", "Faid", "Ali", "Maher"].map((item, idx) => (
-                            <React.Fragment key={idx}>
-                              <span className="p-1 bg-sky-100 rounded text-base mono">"{item}"</span>
-                              {idx < 3 && <span className="text-gray-400">,</span>}
-                            </React.Fragment>
-                          ))}
-                          <span className="mono text-lg">{'}'}</span>
-                       </div>
-                     </div>
-                      <div className="p-3 border rounded bg-white">
-                       <div className="text-xs font-semibold text-center mb-2">string[]</div>
-                       <div className="flex flex-wrap items-center justify-center gap-1">
-                          <span className="mono text-lg">{'{'}</span>
-                          {["Mohammed", "Faid", "Ali", "Maher"].map((item, idx) => (
-                            <React.Fragment key={idx}>
-                              <span className="p-1 bg-sky-100 rounded text-base mono">"{item}"</span>
-                              {idx < 3 && <span className="text-gray-400">,</span>}
-                            </React.Fragment>
-                          ))}
-                          <span className="mono text-lg">{'}'}</span>
-                       </div>
-                     </div>
-                   </div>
-                ) : isStructToLineProblem ? (
-                    <div className="p-4 border rounded-lg bg-white">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
-                            {Object.entries(fixedClientData).map(([key, value]) => (
-                                <div key={key}>
-                                    <div className="text-xs text-gray-500">{key}</div>
-                                    <div className="font-semibold mono bg-slate-50 p-1 rounded">{value.toString()}</div>
+                <h3 className="font-bold text-slate-600 mb-2">{isStringModificationProblem ? 'Modified String' : 'Input String'}</h3>
+                <div className="flex flex-wrap bg-slate-100 p-2 rounded-lg">
+                    {charList.map((c, idx) => {
+                        const isModified = current.i === idx && (isStringModificationProblem || isVowelProblem);
+                        const isCurrent = current.i === idx;
+                        return (
+                            <div key={idx} className="flex flex-col items-center">
+                                <div className="index-cell text-xs text-gray-500">{idx}</div>
+                                <div className={`char-cell mono ${isCurrent ? 'yellow' : ''}`}>
+                                    <span className={isModified && current.modified && prevStep?.modified && current.modified[idx] !== prevStep.modified[idx] ? 'char-changed' : ''}>
+                                        {isStringModificationProblem ? (current.modified ? current.modified[idx] : c) : c}
+                                    </span>
                                 </div>
-                            ))}
-                        </div>
-                    </div>
-                ) : (
-                  <div className="p-3 border rounded bg-white flex items-center justify-center min-h-[96px]">
-                    <div className="text-2xl font-bold mono p-4">{[12, 13, 14, 15, 18, 19, 20, 22, 25, 26, 27].includes(problem.id) ? (problem.id === 19 ? input.split('|')[0] : input) : (charList[0] || '')}</div>
-                  </div>
-                )}
-            </div>
-
-            <div className="mb-4">
-              <div className="text-sm font-semibold mb-2">Execution Line</div>
-              <div className={`codebox mono text-sm p-4 ${conditionalClass}`}>{current.code || '(no code)'}</div>
-              <div className="mt-3 text-sm text-gray-700 min-h-[20px] flex items-center gap-2">
-                {isConditional && (isTrue ? <Icon name="check-circle" className="text-green-500" /> : <Icon name="x-circle" className="text-red-500" />)}
-                <span>{current.explanation}</span>
-              </div>
-            </div>
-
-            <div className="mb-4">
-              <div className="text-sm font-semibold mb-2">Modified String / Live Output</div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <div className="text-xs text-gray-500 mb-1">Modified</div>
-                  <div className="p-3 bg-slate-100 rounded mono min-h-[44px] whitespace-pre-wrap break-words">{modifiedChars}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-gray-500 mb-1">Output / Collected</div>
-                  <div key={pos} className={`p-3 bg-slate-100 rounded mono min-h-[44px] whitespace-pre-wrap ${current.output && pos > 0 ? 'item-enter' : ''}`}>{current.output ? (current.output.length ? current.output.join('') : '<empty>') : '<none>'}</div>
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <h3 className="text-sm font-semibold mb-2">Functions Used</h3>
-              {problem.functions.map((f, idx) => (<FunctionCard key={idx} f={f} />))}
-            </div>
-          </div>
-
-          <aside>
-            <div className="sticky top-6 space-y-4">
-              <div className="card">
-                <div className="text-xs text-gray-500 mb-2">{isIndexedLoopProblem ? 'Loop Variable: i' : 'Execution Step'}</div>
-                <div className="p-4 bg-sky-100 rounded text-center mono font-bold text-xl">{current.i === undefined || current.i < 0 ? 'START' : current.i}</div>
-              </div>
-
-              {(isAddClientsProblem || isLoadClientsProblem) && current.loop && (
-                  <div className="card">
-                      <div className="text-sm font-semibold mb-2">{isAddClientsProblem ? 'Do-While Loop Status' : 'File Read Loop Status'}</div>
-                      <div className="grid grid-cols-2 gap-2 text-center">
-                            <div>
-                                <div className="text-xs text-gray-500">Iteration</div>
-                                <div className="p-2 bg-blue-100 rounded mt-1 font-bold text-lg">{current.loop.iteration}</div>
                             </div>
-                            <div>
-                                <div className="text-xs text-gray-500">Continue?</div>
-                                <div className={`p-2 rounded mt-1 font-bold text-lg ${current.loop.continue ? 'bg-green-100' : 'bg-red-100'}`}>{current.loop.continue ? 'Yes' : 'No'}</div>
-                            </div>
-                      </div>
-                  </div>
-              )}
-              
-              {isUpdateClientProblem && (() => {
-                const updateState = current.update || { target: input, found: false, confirmed: null };
-                const phaseMap: {[key: string]: string} = {
-                    read_account_number: 'Read Input', load_vector: 'Load Vector', find_client: 'Finding Client',
-                    confirm_update: 'Awaiting Confirmation', read_new_data: 'Reading New Data',
-                    update_vector: 'Updating in Memory', save_to_file: 'Saving to File', print_result: 'Printing Result'
-                };
-                return (
-                  <div className="card">
-                    <div className="text-sm font-semibold mb-2">Update Operation</div>
-                    <div className="space-y-2">
-                        <div>
-                            <div className="text-xs text-gray-500">Phase</div>
-                            <div className="p-2 bg-indigo-100 rounded mt-1 font-bold text-base text-center">{phaseMap[current.phase || ''] || 'N/A'}</div>
-                        </div>
-                        <div>
-                            <div className="text-xs text-gray-500">Target Account #</div>
-                            <div className="p-2 bg-purple-100 rounded mt-1 font-bold text-base mono">"{updateState.target}"</div>
-                        </div>
-                        <div>
-                            <div className="text-xs text-gray-500">Found?</div>
-                            <div className={`p-2 rounded mt-1 font-bold text-base ${updateState.found ? 'bg-green-100' : 'bg-red-100'}`}>{updateState.found ? 'Yes ✓' : 'No ✗'}</div>
-                        </div>
-                         <div>
-                            <div className="text-xs text-gray-500">Confirmed?</div>
-                            <div className={`p-2 rounded mt-1 font-bold text-base ${updateState.confirmed === null ? 'bg-gray-100' : (updateState.confirmed ? 'bg-green-100' : 'bg-red-100')}`}>{updateState.confirmed === null ? 'N/A' : (updateState.confirmed ? 'Yes ✓' : 'No ✗')}</div>
-                        </div>
-                    </div>
-                  </div>
-                )
-              })()}
-
-              {isDeleteClientProblem && (() => {
-                const deleteState = current.delete || { target: input, found: false, confirmed: null };
-                const phaseMap: {[key: string]: string} = {
-                    read_account_number: 'Read Input', load_vector: 'Load Vector', find_client: 'Finding Client',
-                    confirm_delete: 'Awaiting Confirmation', mark_for_delete: 'Marking for Delete',
-                    save_to_file: 'Saving to File', reload_vector: 'Reloading Vector', print_result: 'Printing Result'
-                };
-                return (
-                  <div className="card">
-                    <div className="text-sm font-semibold mb-2">Delete Operation</div>
-                    <div className="space-y-2">
-                        <div>
-                            <div className="text-xs text-gray-500">Phase</div>
-                            <div className="p-2 bg-indigo-100 rounded mt-1 font-bold text-base text-center">{phaseMap[current.phase || ''] || 'N/A'}</div>
-                        </div>
-                        <div>
-                            <div className="text-xs text-gray-500">Target Account #</div>
-                            <div className="p-2 bg-purple-100 rounded mt-1 font-bold text-base mono">"{deleteState.target}"</div>
-                        </div>
-                        <div>
-                            <div className="text-xs text-gray-500">Found?</div>
-                            <div className={`p-2 rounded mt-1 font-bold text-base ${deleteState.found ? 'bg-green-100' : 'bg-red-100'}`}>{deleteState.found ? 'Yes ✓' : 'No ✗'}</div>
-                        </div>
-                         <div>
-                            <div className="text-xs text-gray-500">Confirmed?</div>
-                            <div className={`p-2 rounded mt-1 font-bold text-base ${deleteState.confirmed === null ? 'bg-gray-100' : (deleteState.confirmed ? 'bg-green-100' : 'bg-red-100')}`}>{deleteState.confirmed === null ? 'N/A' : (deleteState.confirmed ? 'Yes ✓' : 'No ✗')}</div>
-                        </div>
-                    </div>
-                  </div>
-                )
-              })()}
-
-
-              {isFindClientProblem && (() => {
-                const searchState = current.search || { target: input, currentIndex: -1, found: false };
-                return (
-                  <div className="card">
-                    <div className="text-sm font-semibold mb-2">Search Status</div>
-                    <div className="space-y-2">
-                      <div>
-                        <div className="text-xs text-gray-500">Target Account #</div>
-                        <div className="p-2 bg-purple-100 rounded mt-1 font-bold text-base mono">"{searchState.target}"</div>
-                      </div>
-                      <div>
-                        <div className="text-xs text-gray-500">Checking Index</div>
-                        <div className="p-2 bg-sky-100 rounded mt-1 font-bold text-base mono">{searchState.currentIndex < 0 ? 'N/A' : searchState.currentIndex}</div>
-                      </div>
-                      <div>
-                        <div className="text-xs text-gray-500">Found?</div>
-                        <div className={`p-2 rounded mt-1 font-bold text-base ${searchState.found ? 'bg-green-100' : 'bg-red-100'}`}>{searchState.found ? 'Yes ✓' : 'No ✗'}</div>
-                      </div>
-                    </div>
-                  </div>
-                )
-              })()}
-
-              {(isTrimProblem || isJoinOverloadProblem || isReverseWordsProblem || isLineToStructProblem || isAddClientsProblem || isLoadClientsProblem || isFindClientProblem || isUpdateClientProblem) && !isDeleteClientProblem && (() => {
-                  const phaseMap: {[key: string]: string} = {
-                      left: 'Trim Left', right: 'Trim Right', all: 'Trim All', vector: 'Vector Join',
-                      array: 'Array Join', split: 'Splitting String', reverse: 'Reversing Words',
-                      assign: 'Assigning to Struct', print: 'Printing Record', read_client: 'Reading Data',
-                      convert_client: 'Converting to Line', save_client: 'Saving to File',
-                      loop_check: 'Loop Check', load_file: 'Loading File', parse_line: 'Parsing Line',
-                      add_to_vector: 'Add to Vector', print_table: 'Printing Table', read_account_number: 'Read Input',
-                      load_vector: 'Load Vector', search_vector: 'Searching Vector', print_result: 'Print Result',
-                      confirm_update: 'Confirm Update', read_new_data: 'Read New Data', update_vector: 'Update Vector'
-                  };
-                  const currentPhase = current.phase || (isTrimProblem ? 'left' : (isJoinOverloadProblem ? 'vector' : (isReverseWordsProblem || isLineToStructProblem ? 'split' : '')));
-                  return (
-                    currentPhase && phaseMap[currentPhase] ?
-                      <div className="card">
-                          <div className="text-sm font-semibold mb-2">Current Operation</div>
-                          <div className="p-3 bg-indigo-100 rounded text-center font-bold text-lg">
-                              {phaseMap[currentPhase] || 'N/A'}
-                          </div>
-                      </div> : null
-                  );
-              })()}
-              
-              {(isStructToLineProblem || isLineToStructProblem || isAddClientsProblem) && (() => {
-                  const clientData: {[key:string]: string | number} = (isStructToLineProblem || isAddClientsProblem) ? { AccountNumber: "", PinCode: "", Name: "", Phone: "", AccountBalance: 0.0 } : { AccountNumber: "", PinCode: "", Name: "", Phone: "", AccountBalance: 0.0 };
-                  
-                  if (isStructToLineProblem) {
-                      Object.assign(clientData, fixedClientData);
-                  }
-
-                  if (isLineToStructProblem) {
-                      const relevantSteps = steps.slice(0, pos + 1).filter(s => s.phase === 'assign');
-                      for(const step of relevantSteps) {
-                          const match = step.mem.join('|').match(/Client\.(\w+)\s*=\s*(.*)/);
-                          if(match) {
-                            const key = match[1];
-                            const value = match[2];
-                            clientData[key] = isNaN(Number(value)) ? value : Number(value);
-                          }
-                      }
-                  }
-
-                  if (isAddClientsProblem && current.phase?.startsWith('read')) {
-                      const relevantSteps = steps.slice(0, pos + 1).filter(s => s.loop?.iteration === current.loop?.iteration && s.phase?.startsWith('read'));
-                      for(const step of relevantSteps) {
-                          const match = step.mem.join('|').match(/Client\.(\w+)\s*=\s*(.*)/);
-                          if(match) {
-                            const key = match[1];
-                            const value = match[2];
-                            clientData[key] = isNaN(Number(value)) ? value : Number(value);
-                          }
-                      }
-                  }
-
-                  return (
-                      <div className="card">
-                          <div className="text-sm font-semibold mb-2">Live sClient Data</div>
-                          <div className="paper text-sm space-y-1 p-2">
-                              {Object.entries(clientData).map(([key, value]) => (
-                                  <div key={key} className={`flex items-center gap-2 p-1 rounded transition-colors ${(current.field === key && (current.phase?.startsWith('read') || current.phase?.startsWith('convert') || current.phase === 'assign')) ? 'bg-yellow-300' : ''}`}>
-                                      <span className="text-xs text-gray-600 font-semibold w-2/5">{key}:</span>
-                                      <span className="p-1 bg-sky-100 rounded text-xs mono w-full break-all">"{value.toString()}"</span>
-                                  </div>
-                              ))}
-                          </div>
-                      </div>
-                  );
-              })()}
-
-              {isFileBasedProblem && current.phase !== 'read_account_number' && (
-                <div className="card">
-                  <div className="text-sm font-semibold mb-2">Live File View (`Clients.txt`)</div>
-                   <div className="paper text-sm mono" style={{ minHeight: 100, maxHeight: 200, overflowY: 'auto' }}>
-                     {current.fileContents && current.fileContents.length > 0 ? current.fileContents.map((line, idx) => (
-                       <div key={idx} className={`whitespace-pre-wrap break-all p-1 rounded ${current.loop?.currentLine === idx ? 'bg-yellow-300' : ''}`}>{line}</div>
-                     )) : <div className="text-gray-500 italic text-xs">File is empty.</div>}
-                   </div>
+                        );
+                    })}
                 </div>
-              )}
-
-              {isFirstLetterFlag && (
-                <div className="card">
-                  <div className="text-xs text-gray-500 mb-2">Flag: isFirstLetter</div>
-                  <div className="p-4 bg-emerald-100 rounded text-center font-bold text-xl">{isFirstLetterFlag.includes('true') ? 'True ✓' : 'False ✗'}</div>
-                  <div className="text-xs text-gray-500 mt-2">True when the next char could be the start of a word.</div>
-                </div>
-              )}
-
-              {isCounterProblem && (() => {
-                  const getCounts = (step: Step | null) => ({
-                    capitalCount: extractValue(step, /(?<=capitalCount=)\d+/),
-                    smallCount: extractValue(step, /(?<=smallCount=)\d+/),
-                  });
-                  const { capitalCount, smallCount } = getCounts(current);
-                  const { capitalCount: prevCapital, smallCount: prevSmall } = getCounts(prevStep);
-                  return (
-                      <div className="card">
-                          <div className="text-sm font-semibold mb-2">Live Counters</div>
-                          <div className="grid grid-cols-2 gap-2 text-center">
-                              <div>
-                                  <div className="text-xs text-gray-500">Capital</div>
-                                  <div className={`p-2 bg-blue-100 rounded mt-1 font-bold text-lg ${capitalCount !== prevCapital && pos > 0 ? 'value-update' : ''}`}>{capitalCount}</div>
-                              </div>
-                              <div>
-                                  <div className="text-xs text-gray-500">Small</div>
-                                  <div className={`p-2 bg-green-100 rounded mt-1 font-bold text-lg ${smallCount !== prevSmall && pos > 0 ? 'value-update' : ''}`}>{smallCount}</div>
-                              </div>
-                          </div>
-                      </div>
-                  )
-              })()}
-
-              {isSpecificCounterProblem && (() => {
-                  const getTrace = (step: Step | null) => ({
-                    targetChar: extractValue(step, /(?<=target=')(.)(?=')/, '?'),
-                    count: extractValue(step, /(?<=count=)\d+/),
-                  });
-                  const { targetChar, count } = getTrace(current);
-                  const { count: prevCount } = getTrace(prevStep);
-                  return (
-                      <div className="card">
-                          <div className="text-sm font-semibold mb-2">Live Trace</div>
-                          <div className="grid grid-cols-2 gap-2 text-center">
-                              <div>
-                                  <div className="text-xs text-gray-500">Target Char</div>
-                                  <div className="p-2 bg-purple-100 rounded mt-1 font-bold text-lg">{targetChar}</div>
-                              </div>
-                              <div>
-                                  <div className="text-xs text-gray-500">Count</div>
-                                  <div className={`p-2 bg-green-100 rounded mt-1 font-bold text-lg ${count !== prevCount && pos > 0 ? 'value-update' : ''}`}>{count}</div>
-                              </div>
-                          </div>
-                      </div>
-                  )
-              })()}
-
-              {isCaseInsensitiveCounterProblem && (() => {
-                  const targetChar = (input.split('|')[1] || '?')[0];
-                  const finalSensitiveStep = steps.find(s => s.phase === 'sensitive' && s.i === (input.split('|')[0] || '').length);
-                  const finalSensitiveCount = extractValue(finalSensitiveStep, /(?<=count=)\d+/);
-                  
-                  const getCount = (step: Step | null) => extractValue(step, /(?<=count=)\d+/);
-                  
-                  let sensitiveCount = '0', insensitiveCount = '0';
-                  let prevSensitiveCount = '0', prevInsensitiveCount = '0';
-
-                  if (current.phase === 'sensitive') {
-                      sensitiveCount = getCount(current);
-                      prevSensitiveCount = getCount(prevStep);
-                  } else { 
-                      sensitiveCount = finalSensitiveCount;
-                      prevSensitiveCount = finalSensitiveCount;
-                      insensitiveCount = getCount(current);
-                      prevInsensitiveCount = getCount(prevStep);
-                  }
-
-                  return (
-                      <div className="card">
-                          <div className="text-sm font-semibold mb-2">Live Counters</div>
-                          <div className="text-center mb-2">
-                              <div className="text-xs text-gray-500">Target Char</div>
-                              <div className="p-2 bg-purple-100 rounded mt-1 font-bold text-lg">{targetChar}</div>
-                          </div>
-                          <div className="grid grid-cols-2 gap-2 text-center">
-                              <div>
-                                  <div className="text-xs text-gray-500">Case-Sensitive</div>
-                                  <div className={`p-2 bg-blue-100 rounded mt-1 font-bold text-lg ${sensitiveCount !== prevSensitiveCount && pos > 0 ? 'value-update' : ''}`}>{sensitiveCount}</div>
-                              </div>
-                              <div>
-                                  <div className="text-xs text-gray-500">Case-Insensitive</div>
-                                  <div className={`p-2 bg-green-100 rounded mt-1 font-bold text-lg ${insensitiveCount !== prevInsensitiveCount && pos > 0 ? 'value-update' : ''}`}>{insensitiveCount}</div>
-                              </div>
-                          </div>
-                          <div className="text-xs text-gray-500 mt-2 text-center p-2 bg-sky-50 rounded">
-                              Currently in: <span className="font-semibold">{current.phase === 'sensitive' ? 'Case-Sensitive' : 'Case-Insensitive'} Phase</span>
-                          </div>
-                      </div>
-                  );
-              })()}
-
-              {isVowelCounterProblem && (() => {
-                  const count = extractValue(current, /(?<=count=)\d+/);
-                  const prevCount = extractValue(prevStep, /(?<=count=)\d+/);
-                  return (
-                      <div className="card">
-                          <div className="text-sm font-semibold mb-2">Live Vowel Counter</div>
-                          <div className="grid grid-cols-1 gap-2 text-center">
-                              <div>
-                                  <div className="text-xs text-gray-500">Vowels Found</div>
-                                  <div className={`p-2 bg-rose-100 rounded mt-1 font-bold text-lg ${count !== prevCount && pos > 0 ? 'value-update' : ''}`}>{count}</div>
-                              </div>
-                          </div>
-                      </div>
-                  )
-              })()}
-
-              {isWordCounterProblem && (() => {
-                  const count = extractValue(current, /(?<=Counter=)\d+/);
-                  const prevCount = extractValue(prevStep, /(?<=Counter=)\d+/);
-                  return (
-                      <div className="card">
-                          <div className="text-sm font-semibold mb-2">Live Word Counter</div>
-                          <div className="grid grid-cols-1 gap-2 text-center">
-                              <div>
-                                  <div className="text-xs text-gray-500">Words Found</div>
-                                  <div className={`p-2 bg-fuchsia-100 rounded mt-1 font-bold text-lg ${count !== prevCount && pos > 0 ? 'value-update' : ''}`}>{count}</div>
-                              </div>
-                          </div>
-                      </div>
-                  )
-              })()}
-              
-              {isReplaceWordProblem && (() => {
-                  const parts = input.split('|');
-                  const find = parts[1] || '?';
-                  const replace = parts[2] || '?';
-                  const posVal = extractValue(current, /(?<=pos\\s*=\\s*)(-?\\d+)/, '?');
-                  return (
-                      <div className="card">
-                          <div className="text-sm font-semibold mb-2">Live Trace</div>
-                          <div className="space-y-2">
-                              <div>
-                                  <div className="text-xs text-gray-500">Find Word</div>
-                                  <div className="p-2 bg-purple-100 rounded mt-1 font-bold text-base mono">"{find}"</div>
-                              </div>
-                              <div>
-                                  <div className="text-xs text-gray-500">Replace With</div>
-                                  <div className="p-2 bg-emerald-100 rounded mt-1 font-bold text-base mono">"{replace}"</div>
-                              </div>
-                              <div>
-                                  <div className="text-xs text-gray-500">Position (pos)</div>
-                                  <div className="p-2 bg-sky-100 rounded mt-1 font-bold text-base mono">{posVal}</div>
-                              </div>
-                          </div>
-                      </div>
-                  )
-              })()}
-
-              {isVectorProblem && (() => {
-                  let vectorItems: any[] = [];
-                  if (isFileBasedProblem) {
-                      vectorItems = current.vectorContents || [];
-                  } else if (current.mem) {
-                      const memString = current.mem.join('|');
-                      const vecMatch = memString.match(/vString=\[(.*?)\]/);
-                      if (vecMatch && vecMatch[1]) {
-                          vectorItems = vecMatch[1].split(',').filter(Boolean);
-                      } else if (vecMatch) {
-                          vectorItems = [];
-                      }
-                  }
-                  const prevVectorItems = prevStep?.vectorContents || [];
-                  return (
-                      <div className="card">
-                          <div className="text-sm font-semibold mb-2">Live Vector {isFileBasedProblem ? `(vClients)`: ''}</div>
-                          <div className="paper text-sm space-y-1 p-2" style={{minHeight: 100, maxHeight: 200, overflowY: 'auto'}}>
-                              {vectorItems.length > 0 ? vectorItems.map((item, index) => {
-                                const isNew = index >= prevVectorItems.length;
-                                const isUpdated = isUpdateClientProblem && current.phase === 'update_vector' && current.i === index;
-                                return (
-                                  <div key={index} className={`flex items-center gap-2 p-1 rounded transition-colors ${isNew && pos > 0 ? 'item-enter' : ''} ${
-                                      (isReverseWordsProblem && current.phase === 'reverse' && current.i === index) ||
-                                      (isLineToStructProblem && current.phase === 'assign' && current.i === index) ||
-                                      (isFindClientProblem && current.phase === 'search_vector' && current.search?.currentIndex === index) ||
-                                      (isDeleteClientProblem && (current.phase === 'find_client' || current.phase === 'mark_for_delete' || current.phase === 'save_to_file') && current.i === index) ||
-                                      (isUpdateClientProblem && (current.phase === 'find_client' || current.phase === 'update_vector' || current.phase === 'save_to_file') && current.i === index)
-                                      ? 'bg-yellow-300' : ''
-                                  } ${isUpdated ? 'value-update' : ''}`}>
-                                      <span className="text-xs text-gray-500 w-4">{index}:</span>
-                                      <span className="p-1 bg-sky-100 rounded text-xs mono w-full flex justify-between items-center">
-                                          <span>{typeof item === 'object' ? `{${item.AccountNumber}, ${item.Name}}` : `"${item}"`}</span>
-                                          {isDeleteClientProblem && typeof item === 'object' && item.MarkForDelete && (
-                                              <span className="text-xs font-bold text-red-600 bg-red-100 px-1.5 py-0.5 rounded-full">DELETED</span>
-                                          )}
-                                          {isUpdated && (
-                                              <span className="text-xs font-bold text-green-600 bg-green-100 px-1.5 py-0.5 rounded-full">UPDATED</span>
-                                          )}
-                                      </span>
-                                  </div>
-                              )}) : <div className="text-gray-500 italic text-xs">Vector is empty.</div>}
-                          </div>
-                      </div>
-                  )
-              })()}
-              
-              <div className="card">
-                  <div className="text-sm font-semibold mb-2">Key Concepts</div>
-                  <div className="flex flex-wrap gap-2">
-                    {problem.keyConcepts.map((concept, i) => (
-                      <span key={i} className="pill bg-amber-200 text-amber-900 text-xs font-semibold">{concept}</span>
-                    ))}
-                  </div>
-              </div>
-
-              <div className="card">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="text-sm font-semibold">Paper & Pen</div>
-                  <label className="inline-flex items-center text-xs gap-2 cursor-pointer"><input type="checkbox" checked={paper} onChange={() => setPaper(p => !p)} className="form-checkbox" /> Follow</label>
-                </div>
-                <div className="paper text-sm" style={{ minHeight: 120, maxHeight: 220, overflowY: 'auto' }}>
-                  {notes.length === 0 ? <div className="text-gray-500 italic text-xs">No notes yet. Enable 'Follow' and step through to trace execution.</div> : notes.map((n, i) => (<div key={i} className="mb-1">✎ {n}</div>))}
-                </div>
-              </div>
-
-              <div className="card">
-                <div className="text-sm font-semibold mb-2">Simulated Memory</div>
-                <div style={{ maxHeight: 220, overflowY: 'auto' }} className="text-xs mono space-y-1">
-                  {memory.length === 0 ? <div className="text-gray-500 italic">Memory empty. Step through to populate.</div> : memory.slice(-30).reverse().map((m, i) => {
-                      const lastAddedCount = (current.modified ? 1 : 0) + (current.mem?.length || 0);
-                      return (
-                          <div key={m.t} className={i < lastAddedCount && pos > 0 ? 'item-enter' : ''}>• {new Date(m.t).toLocaleTimeString()} — {m.note}</div>
-                      )
-                  })}
-                </div>
-              </div>
             </div>
-          </aside>
+
+            {/* Vector Visualizer */}
+            {isVectorProblem && current.vectorContents && (
+                <div className="mb-4">
+                    <h3 className="font-bold text-slate-600 mb-2">Vector Contents</h3>
+                    <div className="flex flex-wrap gap-2">
+                        {current.vectorContents.map((item, idx) => {
+                            const isCurrent = (current.phase === 'reverse' || current.phase === 'search_vector' || current.phase === 'find_client' || current.phase === 'mark_for_delete' || current.phase === 'update_vector') && current.i === idx;
+                            const isNewlyAdded = prevStep?.vectorContents && current.vectorContents && current.vectorContents.length > prevStep.vectorContents.length && idx === current.vectorContents.length - 1;
+                            return (
+                                <div key={idx} className={`p-2 rounded-lg border ${isCurrent ? 'bg-yellow-300 border-yellow-400' : 'bg-slate-100 border-slate-200'} ${isNewlyAdded ? 'item-enter' : ''}`}>
+                                    <span className="text-xs text-gray-500 mr-2">{idx}</span>
+                                    <span className="mono font-semibold">{typeof item === 'object' ? item.Name : item}</span>
+                                </div>
+                            );
+                        })}
+                        {current.vectorContents.length === 0 && <div className="text-sm text-gray-500 italic">Vector is empty.</div>}
+                    </div>
+                </div>
+            )}
+
+            {/* File Visualizer */}
+            {isFileProblem && current.fileContents && (
+                <div className="mb-4">
+                    <h3 className="font-bold text-slate-600 mb-2">Simulated File: Clients.txt</h3>
+                    <pre className="codebox text-xs p-3 h-32 overflow-y-auto">
+                        {current.fileContents.map((line, idx) => (
+                            <div key={idx} className={`transition-colors ${current.loop?.currentLine === idx ? 'bg-teal-900' : ''}`}>{line}</div>
+                        ))}
+                    </pre>
+                </div>
+            )}
+
+            {/* Client Struct Visualizer */}
+            {(isStructLineProblem || isClientSearchProblem || isClientDeleteProblem || isClientUpdateProblem) && (
+                <div className="mb-4">
+                    <h3 className="font-bold text-slate-600 mb-2">Client Struct</h3>
+                    <div className="grid grid-cols-2 gap-2 text-sm mono p-3 bg-slate-100 rounded-lg">
+                        {Object.entries({AccountNumber: '', PinCode: '', Name: '', Phone: '', AccountBalance: ''}).map(([key]) => {
+                            const client = current.search?.resultClient || current.delete?.client || current.update?.clientBefore || (current.phase === 'assign' ? current.vectorContents?.[current.i] : null);
+                            let value = '...';
+                            if (current.phase === 'assign' && current.field === key) value = current.modified ?? '...';
+                            if (client) value = client[key];
+                             if (current.update?.clientAfter && current.update.clientAfter[key] !== current.update.clientBefore?.[key]) {
+                                value = current.update.clientAfter[key];
+                            }
+                            const isHighlighted = current.field === key || (current.update?.clientAfter && current.field === key);
+
+                            return (
+                                <React.Fragment key={key}>
+                                    <div className={`font-semibold p-1 rounded ${isHighlighted ? 'bg-yellow-300' : ''}`}>{key}:</div>
+                                    <div className={`p-1 rounded ${isHighlighted ? 'bg-yellow-300 value-update' : ''}`}>{value}</div>
+                                </React.Fragment>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
+
+            {/* Output Area */}
+            {current.output && current.output.length > 0 && (
+                <div>
+                    <h3 className="font-bold text-slate-600 mb-2">Output</h3>
+                    <pre className="codebox text-sm p-3">
+                        {current.output.join('\n')}
+                    </pre>
+                </div>
+            )}
         </div>
+        
+        {/* Explanation and Memory */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="card">
+            <h3 className="font-bold text-slate-600 mb-2">Explanation</h3>
+            <p className="text-sm">{current.explanation}</p>
+            <pre className="codebox text-sm p-2 mt-3">{current.code}</pre>
+          </div>
+          <div className="card">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="font-bold text-slate-600">Simulated Memory</h3>
+              <button onClick={() => setPaper(p => !p)} className={`px-3 py-1 text-xs font-bold rounded-full flex items-center gap-1 ${paper ? 'bg-amber-400 text-amber-900' : 'bg-gray-200'}`}>
+                <Icon name="edit-3" size={12}/> Paper & Pen {paper ? 'ON' : 'OFF'}
+              </button>
+            </div>
+            {paper ? (
+              <pre className="paper text-xs h-32 overflow-y-auto">{notes.join('\n')}</pre>
+            ) : (
+              <ul className="text-sm mono space-y-1 h-32 overflow-y-auto">
+                {memory.slice().reverse().map(item => (
+                  <li key={item.t} className="bg-slate-100 p-1 rounded text-xs value-update">{item.note}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+
+        <div className="card">
+          <h3 className="font-bold text-slate-600 mb-2">Example C++ Code</h3>
+          <pre className="codebox text-xs p-3 h-48 overflow-y-auto"><code>{generateCppCode()}</code></pre>
+        </div>
+
       </div>
     </div>
   );
