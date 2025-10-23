@@ -193,27 +193,27 @@ const Visualizer: React.FC<VisualizerProps> = ({ problem }) => {
     <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
       {/* Left Column */}
       <div className="lg:col-span-2 space-y-4">
-        <div className="card">
-          <h2 className="text-xl font-bold mb-2">{problem.title}</h2>
-          <p className="text-sm text-gray-600 mb-3">{problem.description}</p>
+        <div className="card bg-white dark:bg-slate-800">
+          <h2 className="text-xl font-bold mb-2 text-slate-800 dark:text-slate-200">{problem.title}</h2>
+          <p className="text-sm text-slate-600 dark:text-slate-300 mb-3">{problem.description}</p>
           <div className="flex flex-wrap gap-2">
-            {problem.keyConcepts.map(c => <span key={c} className="pill text-xs">{c}</span>)}
+            {problem.keyConcepts.map(c => <span key={c} className="pill text-xs bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-200 px-3 py-1 rounded-full font-medium">{c}</span>)}
           </div>
         </div>
         <div>
-          <h3 className="text-lg font-bold mb-2 text-slate-600">Functions Involved</h3>
+          <h3 className="text-lg font-bold mb-2 text-slate-600 dark:text-slate-300">Functions Involved</h3>
           {problem.functions.map(f => <FunctionCard key={f.name} f={f} />)}
         </div>
         {problem.hints && (
           <div>
-            <h3 className="text-lg font-bold mb-2 text-slate-600">Hints</h3>
+            <h3 className="text-lg font-bold mb-2 text-slate-600 dark:text-slate-300">Hints</h3>
             <div className="space-y-2">
               {problem.hints.map((hint, i) => (
-                <div key={i} className="card p-3">
+                <div key={i} className="card bg-white dark:bg-slate-800 p-3">
                   {revealedHints.includes(i) ? (
-                    <p className="text-sm text-gray-700">{hint}</p>
+                    <p className="text-sm text-slate-700 dark:text-slate-300">{hint}</p>
                   ) : (
-                    <button onClick={() => setRevealedHints(prev => [...prev, i])} className="flex items-center gap-2 text-sm font-semibold text-teal-600 hover:text-teal-700">
+                    <button onClick={() => setRevealedHints(prev => [...prev, i])} className="flex items-center gap-2 text-sm font-semibold text-teal-600 hover:text-teal-700 dark:text-teal-400 dark:hover:text-teal-300">
                       <Icon name="lightbulb" size={16} />
                       <span>Reveal Hint {i + 1}</span>
                     </button>
@@ -227,39 +227,39 @@ const Visualizer: React.FC<VisualizerProps> = ({ problem }) => {
 
       {/* Right Column */}
       <div className="lg:col-span-3 space-y-4">
-        <div className="card">
+        <div className="card bg-white dark:bg-slate-800">
           <div className="flex flex-col sm:flex-row gap-4">
-            <input type="text" value={input} onChange={(e) => setInput(e.target.value)} className="flex-grow p-2 border rounded-lg focus:ring-2 focus:ring-teal-400 transition" />
-            <button onClick={doReset} className="px-4 py-2 bg-teal-500 text-white font-semibold rounded-lg hover:bg-teal-600 transition flex items-center justify-center gap-2">
+            <input type="text" value={input} onChange={(e) => setInput(e.target.value)} className="flex-grow p-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 rounded-lg focus:ring-2 focus:ring-teal-400 dark:focus:ring-teal-500 transition" />
+            <button onClick={doReset} className="px-4 py-2 bg-teal-500 text-white font-semibold rounded-lg hover:bg-teal-600 dark:bg-teal-400 dark:text-slate-900 dark:hover:bg-teal-300 transition flex items-center justify-center gap-2">
               <Icon name="refresh-cw" size={16} />
               <span>Visualize</span>
             </button>
           </div>
         </div>
 
-        <div className="card flex items-center justify-between">
-          <button onClick={() => setPos(p => Math.max(0, p - 1))} disabled={pos === 0} className="px-4 py-2 bg-gray-200 rounded-lg disabled:opacity-50 flex items-center gap-2 font-semibold">
+        <div className="card bg-white dark:bg-slate-800 flex items-center justify-between">
+          <button onClick={() => setPos(p => Math.max(0, p - 1))} disabled={pos === 0} className="px-4 py-2 bg-slate-200 dark:bg-slate-700 rounded-lg disabled:opacity-50 flex items-center gap-2 font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">
             <Icon name="arrow-left" size={16} /> Prev
           </button>
-          <span className="text-sm text-gray-600 font-semibold">Step {pos + 1} of {steps.length}</span>
-          <button onClick={() => setPos(p => Math.min(steps.length - 1, p + 1))} disabled={pos >= steps.length - 1} className="px-4 py-2 bg-gray-200 rounded-lg disabled:opacity-50 flex items-center gap-2 font-semibold">
+          <span className="text-sm text-slate-600 dark:text-slate-400 font-semibold">Step {pos + 1} of {steps.length}</span>
+          <button onClick={() => setPos(p => Math.min(steps.length - 1, p + 1))} disabled={pos >= steps.length - 1} className="px-4 py-2 bg-slate-200 dark:bg-slate-700 rounded-lg disabled:opacity-50 flex items-center gap-2 font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">
             Next <Icon name="arrow-right" size={16} />
           </button>
         </div>
 
         {/* --- VISUALIZATION AREA --- */}
-        <div className="card">
+        <div className="card bg-white dark:bg-slate-800">
             {/* String Visualizer */}
             <div className="mb-4">
-                <h3 className="font-bold text-slate-600 mb-2">{isStringModificationProblem ? 'Modified String' : 'Input String'}</h3>
-                <div className="flex flex-wrap bg-slate-100 p-2 rounded-lg">
+                <h3 className="font-bold text-slate-600 dark:text-slate-300 mb-2">{isStringModificationProblem ? 'Modified String' : 'Input String'}</h3>
+                <div className="flex flex-wrap bg-slate-100 dark:bg-slate-700/50 p-2 rounded-lg">
                     {charList.map((c, idx) => {
                         const isModified = current.i === idx && (isStringModificationProblem || isVowelProblem);
                         const isCurrent = current.i === idx;
                         return (
                             <div key={idx} className="flex flex-col items-center">
-                                <div className="index-cell text-xs text-gray-500">{idx}</div>
-                                <div className={`char-cell mono ${isCurrent ? 'yellow' : ''}`}>
+                                <div className="index-cell text-xs text-slate-500 dark:text-slate-400">{idx}</div>
+                                <div className={`char-cell mono ${isCurrent ? 'bg-amber-300 dark:bg-amber-500 text-slate-900' : ''}`}>
                                     <span className={isModified && current.modified && prevStep?.modified && current.modified[idx] !== prevStep.modified[idx] ? 'char-changed' : ''}>
                                         {isStringModificationProblem ? (current.modified ? current.modified[idx] : c) : c}
                                     </span>
@@ -273,19 +273,19 @@ const Visualizer: React.FC<VisualizerProps> = ({ problem }) => {
             {/* Vector Visualizer */}
             {isVectorProblem && current.vectorContents && (
                 <div className="mb-4">
-                    <h3 className="font-bold text-slate-600 mb-2">Vector Contents</h3>
+                    <h3 className="font-bold text-slate-600 dark:text-slate-300 mb-2">Vector Contents</h3>
                     <div className="flex flex-wrap gap-2">
                         {current.vectorContents.map((item, idx) => {
                             const isCurrent = (current.phase === 'reverse' || current.phase === 'search_vector' || current.phase === 'find_client' || current.phase === 'mark_for_delete' || current.phase === 'update_vector') && current.i === idx;
                             const isNewlyAdded = prevStep?.vectorContents && current.vectorContents && current.vectorContents.length > prevStep.vectorContents.length && idx === current.vectorContents.length - 1;
                             return (
-                                <div key={idx} className={`p-2 rounded-lg border ${isCurrent ? 'bg-yellow-300 border-yellow-400' : 'bg-slate-100 border-slate-200'} ${isNewlyAdded ? 'item-enter' : ''}`}>
-                                    <span className="text-xs text-gray-500 mr-2">{idx}</span>
+                                <div key={idx} className={`p-2 rounded-lg border ${isCurrent ? 'bg-amber-300 dark:bg-amber-500 border-amber-400 dark:border-amber-600 text-slate-900' : 'bg-slate-100 dark:bg-slate-700 border-slate-200 dark:border-slate-600'} ${isNewlyAdded ? 'item-enter' : ''}`}>
+                                    <span className="text-xs text-slate-500 dark:text-slate-400 mr-2">{idx}</span>
                                     <span className="mono font-semibold">{typeof item === 'object' ? item.Name : item}</span>
                                 </div>
                             );
                         })}
-                        {current.vectorContents.length === 0 && <div className="text-sm text-gray-500 italic">Vector is empty.</div>}
+                        {current.vectorContents.length === 0 && <div className="text-sm text-slate-500 dark:text-slate-400 italic">Vector is empty.</div>}
                     </div>
                 </div>
             )}
@@ -293,10 +293,10 @@ const Visualizer: React.FC<VisualizerProps> = ({ problem }) => {
             {/* File Visualizer */}
             {isFileProblem && current.fileContents && (
                 <div className="mb-4">
-                    <h3 className="font-bold text-slate-600 mb-2">Simulated File: Clients.txt</h3>
-                    <pre className="codebox text-xs p-3 h-32 overflow-y-auto">
+                    <h3 className="font-bold text-slate-600 dark:text-slate-300 mb-2">Simulated File: Clients.txt</h3>
+                    <pre className="codebox bg-slate-800 dark:bg-slate-900 text-cyan-300 dark:text-cyan-300 text-xs p-3 h-32 overflow-y-auto rounded-lg">
                         {current.fileContents.map((line, idx) => (
-                            <div key={idx} className={`transition-colors ${current.loop?.currentLine === idx ? 'bg-teal-900' : ''}`}>{line}</div>
+                            <div key={idx} className={`transition-colors rounded px-1 ${current.loop?.currentLine === idx ? 'bg-teal-600/50' : ''}`}>{line}</div>
                         ))}
                     </pre>
                 </div>
@@ -305,8 +305,8 @@ const Visualizer: React.FC<VisualizerProps> = ({ problem }) => {
             {/* Client Struct Visualizer */}
             {(isStructLineProblem || isClientSearchProblem || isClientDeleteProblem || isClientUpdateProblem) && (
                 <div className="mb-4">
-                    <h3 className="font-bold text-slate-600 mb-2">Client Struct</h3>
-                    <div className="grid grid-cols-2 gap-2 text-sm mono p-3 bg-slate-100 rounded-lg">
+                    <h3 className="font-bold text-slate-600 dark:text-slate-300 mb-2">Client Struct</h3>
+                    <div className="grid grid-cols-2 gap-2 text-sm mono p-3 bg-slate-100 dark:bg-slate-700/50 rounded-lg">
                         {Object.entries({AccountNumber: '', PinCode: '', Name: '', Phone: '', AccountBalance: ''}).map(([key]) => {
                             const client = current.search?.resultClient || current.delete?.client || current.update?.clientBefore || (current.phase === 'assign' ? current.vectorContents?.[current.i] : null);
                             let value = '...';
@@ -319,8 +319,8 @@ const Visualizer: React.FC<VisualizerProps> = ({ problem }) => {
 
                             return (
                                 <React.Fragment key={key}>
-                                    <div className={`font-semibold p-1 rounded ${isHighlighted ? 'bg-yellow-300' : ''}`}>{key}:</div>
-                                    <div className={`p-1 rounded ${isHighlighted ? 'bg-yellow-300 value-update' : ''}`}>{value}</div>
+                                    <div className={`font-semibold p-1 rounded transition-colors ${isHighlighted ? 'bg-amber-300 dark:bg-amber-500 text-slate-900' : ''}`}>{key}:</div>
+                                    <div className={`p-1 rounded transition-colors ${isHighlighted ? 'bg-amber-300 dark:bg-amber-500 text-slate-900 value-update' : ''}`}>{value}</div>
                                 </React.Fragment>
                             );
                         })}
@@ -331,8 +331,8 @@ const Visualizer: React.FC<VisualizerProps> = ({ problem }) => {
             {/* Output Area */}
             {current.output && current.output.length > 0 && (
                 <div>
-                    <h3 className="font-bold text-slate-600 mb-2">Output</h3>
-                    <pre className="codebox text-sm p-3">
+                    <h3 className="font-bold text-slate-600 dark:text-slate-300 mb-2">Output</h3>
+                    <pre className="codebox bg-slate-800 dark:bg-slate-900 text-cyan-300 dark:text-cyan-300 text-sm p-3 rounded-lg">
                         {current.output.join('\n')}
                     </pre>
                 </div>
@@ -341,33 +341,33 @@ const Visualizer: React.FC<VisualizerProps> = ({ problem }) => {
         
         {/* Explanation and Memory */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="card">
-            <h3 className="font-bold text-slate-600 mb-2">Explanation</h3>
-            <p className="text-sm">{current.explanation}</p>
-            <pre className="codebox text-sm p-2 mt-3">{current.code}</pre>
+          <div className="card bg-white dark:bg-slate-800">
+            <h3 className="font-bold text-slate-600 dark:text-slate-300 mb-2">Explanation</h3>
+            <p className="text-sm text-slate-700 dark:text-slate-300">{current.explanation}</p>
+            <pre className="codebox bg-slate-800 dark:bg-slate-900 text-cyan-300 dark:text-cyan-300 text-sm p-2 mt-3 rounded-lg">{current.code}</pre>
           </div>
-          <div className="card">
+          <div className="card bg-white dark:bg-slate-800">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="font-bold text-slate-600">Simulated Memory</h3>
-              <button onClick={() => setPaper(p => !p)} className={`px-3 py-1 text-xs font-bold rounded-full flex items-center gap-1 ${paper ? 'bg-amber-400 text-amber-900' : 'bg-gray-200'}`}>
+              <h3 className="font-bold text-slate-600 dark:text-slate-300">Simulated Memory</h3>
+              <button onClick={() => setPaper(p => !p)} className={`px-3 py-1 text-xs font-bold rounded-full flex items-center gap-1 transition-colors ${paper ? 'bg-amber-400 text-amber-900' : 'bg-gray-200 dark:bg-slate-700 dark:text-slate-200'}`}>
                 <Icon name="edit-3" size={12}/> Paper & Pen {paper ? 'ON' : 'OFF'}
               </button>
             </div>
             {paper ? (
-              <pre className="paper text-xs h-32 overflow-y-auto">{notes.join('\n')}</pre>
+              <pre className="paper bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 text-slate-800 dark:text-amber-100 text-xs h-32 overflow-y-auto rounded-lg p-2">{notes.join('\n')}</pre>
             ) : (
               <ul className="text-sm mono space-y-1 h-32 overflow-y-auto">
                 {memory.slice().reverse().map(item => (
-                  <li key={item.t} className="bg-slate-100 p-1 rounded text-xs value-update">{item.note}</li>
+                  <li key={item.t} className="bg-slate-100 dark:bg-slate-700 p-1 rounded text-xs value-update">{item.note}</li>
                 ))}
               </ul>
             )}
           </div>
         </div>
 
-        <div className="card">
-          <h3 className="font-bold text-slate-600 mb-2">Example C++ Code</h3>
-          <pre className="codebox text-xs p-3 h-48 overflow-y-auto"><code>{generateCppCode()}</code></pre>
+        <div className="card bg-white dark:bg-slate-800">
+          <h3 className="font-bold text-slate-600 dark:text-slate-300 mb-2">Example C++ Code</h3>
+          <pre className="codebox bg-slate-800 dark:bg-slate-900 text-cyan-300 dark:text-cyan-300 text-xs p-3 h-48 overflow-y-auto rounded-lg"><code>{generateCppCode()}</code></pre>
         </div>
 
       </div>
