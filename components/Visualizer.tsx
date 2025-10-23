@@ -14,7 +14,23 @@ interface MemoryItem {
 
 const Visualizer: React.FC<VisualizerProps> = ({ problem }) => {
   const [input, setInput] = useState(problem.example);
-  const [steps, setSteps] = useState<Step[]>(() => problem.generator(problem.example));
+  
+  // Robustly initialize steps, catching any generator errors.
+  const [steps, setSteps] = useState<Step[]>(() => {
+    try {
+      const initialSteps = problem.generator(problem.example);
+      if (!initialSteps || initialSteps.length === 0) {
+        console.error("Generator returned empty steps for initial example:", problem.example);
+        return [{ i: -1, code: 'Initialization Error', explanation: 'Failed to generate visualization steps for the default example.', input: problem.example, mem: [] }];
+      }
+      return initialSteps;
+    } catch (e) {
+      console.error("Error during initial step generation:", e);
+      const message = e instanceof Error ? e.message : String(e);
+      return [{ i: -1, code: 'Initialization Error', explanation: `An error occurred: ${message}`, input: problem.example, mem: [] }];
+    }
+  });
+
   const [pos, setPos] = useState(0);
   const [paper, setPaper] = useState(false);
   const [notes, setNotes] = useState<string[]>([]);
@@ -27,10 +43,58 @@ const Visualizer: React.FC<VisualizerProps> = ({ problem }) => {
     }
   });
 
+  // This function resets the simulation to its initial state based on the current input.
+  // It now includes error handling for the step generator.
+  const doReset = () => {
+    try {
+      const newSteps = problem.generator(input);
+      if (!newSteps || newSteps.length === 0) {
+        console.error("Generator returned empty steps for input:", input);
+        setSteps([{ i: -1, code: 'Generation Error', explanation: 'Could not generate visualization for this input. Please check the format.', input: input, mem: [] }]);
+      } else {
+        setSteps(newSteps);
+      }
+    } catch (e) {
+      console.error("Error in step generator:", e);
+      const message = e instanceof Error ? e.message : String(e);
+      // Set steps to a single error step to prevent crash and inform the user.
+      setSteps([{ i: -1, code: 'Generation Error', explanation: `An error occurred while processing input: ${message}`, input: input, mem: [] }]);
+    }
+    setPos(0);
+    setNotes([]);
+    setRevealedHints([]);
+    setMemory([]); // Explicitly reset memory. The effect will run again but this prevents stale state.
+  };
+
+  // When the problem or input changes, reset the simulation.
   useEffect(() => {
     doReset();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [input, problem]);
+
+  // DERIVED STATE: This is the core of the fix.
+  // Instead of adding/removing memory items imperatively, we now derive the
+  // entire memory state from the `steps` and current `pos`. This guarantees
+  // that the memory log is always consistent with the execution step.
+  useEffect(() => {
+    if (steps.length === 0) {
+      setMemory([]);
+      return;
+    }
+    const relevantSteps = steps.slice(0, pos + 1);
+    let timestamp = Date.now();
+    const newMemory = relevantSteps.flatMap(step => {
+      const items: MemoryItem[] = [];
+      if (step.modified) {
+        items.push({ t: timestamp++, note: `Var="${step.modified}"` });
+      }
+      if (step.mem?.length) {
+        items.push(...step.mem.map(note => ({ t: timestamp++, note })));
+      }
+      return items;
+    });
+    setMemory(newMemory);
+  }, [pos, steps]);
   
   const current = steps[pos] || steps[0];
   const prevStep = pos > 0 ? steps[pos - 1] : null;
@@ -345,6 +409,8 @@ ${mainBody}
     URL.revokeObjectURL(url);
   };
 
+  // Simplified navigation functions. They only need to change the position.
+  // The useEffect hook will take care of updating the memory state.
   const goNext = () => {
     if (pos < steps.length - 1) {
       const newPos = pos + 1;
@@ -352,46 +418,13 @@ ${mainBody}
       if (paper && nextStep?.mem.length) {
         setNotes(n => [...n, ...nextStep.mem.map(m => `[step ${newPos + 1}] ${m}`)]);
       }
-       if (nextStep) {
-        if (nextStep.modified) setMemory(m => [...m, { t: Date.now(), note: `Var="${nextStep.modified}"` }]);
-        if (nextStep.mem.length) setMemory(m => [...m, ...nextStep.mem.map(note => ({ t: Date.now(), note }))]);
-      }
       setPos(newPos);
     }
   };
 
   const goPrev = () => {
-      if (pos > 0) {
-          const prevStepToGo = steps[pos-1];
-          const memToRemoveCount = (prevStepToGo.modified ? 1 : 0) + prevStepToGo.mem.length;
-          setMemory(m => m.slice(0, m.length - memToRemoveCount));
-          setPos(p => p - 1);
-      }
-  };
-
-  const doReset = () => {
-    const newSteps = problem.generator(input);
-    setSteps(newSteps);
-    setPos(0);
-    setNotes([]);
-    setMemory([]);
-    setRevealedHints([]);
-  };
-
-  const jumpToIndex = (idx: number) => {
-    const stepIndex = steps.findIndex(s => s.i === idx && (s.code.toLowerCase().includes('if') || s.code.toLowerCase().includes('check') || s.code.toLowerCase().includes('s1')));
-    if (stepIndex !== -1 && stepIndex > pos) {
-        // To animate memory correctly when jumping forward, we need to add all intermediate steps.
-        const stepsToAdd = steps.slice(pos + 1, stepIndex + 1);
-        const newMemoryItems = stepsToAdd.flatMap(step => [
-            ...(step.modified ? [{ t: Date.now(), note: `Var="${step.modified}"` }] : []),
-            ...step.mem.map(note => ({ t: Date.now(), note }))
-        ]);
-        setMemory(m => [...m, ...newMemoryItems]);
-        setPos(stepIndex);
-    } else if (stepIndex !== -1) {
-        // Jumping back, just reset.
-        doReset();
+    if (pos > 0) {
+      setPos(p => p - 1);
     }
   };
 
@@ -401,7 +434,7 @@ ${mainBody}
     }
   };
 
-  const isFirstLetterFlag = current.mem?.find(m => m.includes('isFirst'));
+  const isFirstLetterFlag = current?.mem?.find(m => m.includes('isFirst'));
   const isIndexedLoopProblem = [1, 2, 3, 4, 6, 7, 8, 10, 11, 20].includes(problem.id);
   const isCounterProblem = problem.id === 6;
   const isSpecificCounterProblem = problem.id === 7;
@@ -433,15 +466,15 @@ ${mainBody}
   };
 
   // Animation helpers
-  const isConditional = /condition is|result is|match:|is it|checking if/i.test(current.explanation);
-  const isTrue = /true|yes|match found/i.test(current.explanation);
+  const isConditional = current && /condition is|result is|match:|is it|checking if/i.test(current.explanation);
+  const isTrue = current && /true|yes|match found/i.test(current.explanation);
   let conditionalClass = '';
   if (isConditional) {
       conditionalClass = isTrue ? 'shadow-lg shadow-green-500/20' : 'shadow-lg shadow-red-500/20';
   }
 
   const prevModified = prevStep?.modified ?? '';
-  const currentModified = current.modified ?? '';
+  const currentModified = current?.modified ?? '';
   const modifiedChars = currentModified.split('').map((char, index) => {
     const isChanged = char !== prevModified[index] || index >= prevModified.length;
     return (
@@ -455,6 +488,18 @@ ${mainBody}
     const matches = memString.match(regex);
     if (matches && matches.length > 0) return matches[matches.length - 1];
     return defaultValue;
+  }
+  
+  if (!current) {
+    return (
+        <div className="card">
+            <div className="p-8 text-center">
+                <h3 className="text-lg font-semibold text-slate-700">Loading Visualization...</h3>
+                <p className="text-sm text-gray-500">Please wait or try resetting.</p>
+                 <button onClick={doReset} className="mt-4 px-3 py-2 bg-orange-500 text-white rounded flex items-center gap-2 hover:bg-orange-600 transition-colors mx-auto"><Icon name="refresh-ccw" /> Reset</button>
+            </div>
+        </div>
+    );
   }
 
   return (
@@ -526,13 +571,13 @@ ${mainBody}
                       <thead>
                         <tr>
                           <th className="index-cell">Index</th>
-                          {charList.map((_, i) => (<th key={i} className={`index-cell cursor-pointer ${i === current.i ? 'yellow' : ''}`} onClick={() => jumpToIndex(i)}>{i}</th>))}
+                          {charList.map((_, i) => (<th key={i} className={`index-cell ${i === current.i ? 'yellow' : ''}`}>{i}</th>))}
                         </tr>
                       </thead>
                       <tbody>
                         <tr>
                           <td className="index-cell font-semibold">Char</td>
-                          {charList.map((ch, i) => (<td key={i} className={`char-cell ${i === current.i ? 'yellow' : ''} cursor-pointer`} onClick={() => jumpToIndex(i)}>{ch === ' ' ? '␣' : ch}</td>))}
+                          {charList.map((ch, i) => (<td key={i} className={`char-cell ${i === current.i ? 'yellow' : ''}`}>{ch === ' ' ? '␣' : ch}</td>))}
                         </tr>
                       </tbody>
                     </table>
@@ -951,7 +996,7 @@ ${mainBody}
                   const parts = input.split('|');
                   const find = parts[1] || '?';
                   const replace = parts[2] || '?';
-                  const posVal = extractValue(current, /(?<=pos\s*=\s*)(-?\d+)/, '?');
+                  const posVal = extractValue(current, /(?<=pos\\s*=\\s*)(-?\\d+)/, '?');
                   return (
                       <div className="card">
                           <div className="text-sm font-semibold mb-2">Live Trace</div>
@@ -1043,9 +1088,9 @@ ${mainBody}
                 <div className="text-sm font-semibold mb-2">Simulated Memory</div>
                 <div style={{ maxHeight: 220, overflowY: 'auto' }} className="text-xs mono space-y-1">
                   {memory.length === 0 ? <div className="text-gray-500 italic">Memory empty. Step through to populate.</div> : memory.slice(-30).reverse().map((m, i) => {
-                      const lastAddedCount = (current.modified ? 1 : 0) + current.mem.length;
+                      const lastAddedCount = (current.modified ? 1 : 0) + (current.mem?.length || 0);
                       return (
-                          <div key={m.t + i} className={i < lastAddedCount && pos > 0 ? 'item-enter' : ''}>• {new Date(m.t).toLocaleTimeString()} — {m.note}</div>
+                          <div key={m.t} className={i < lastAddedCount && pos > 0 ? 'item-enter' : ''}>• {new Date(m.t).toLocaleTimeString()} — {m.note}</div>
                       )
                   })}
                 </div>
