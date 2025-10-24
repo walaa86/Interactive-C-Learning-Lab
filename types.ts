@@ -53,4 +53,5 @@ export interface Problem {
   functions: FunctionDef[];
   keyConcepts: string[];
   hints?: string[];
+  summaryFile?: string;
 }

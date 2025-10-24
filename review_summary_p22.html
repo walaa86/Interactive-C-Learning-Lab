@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ملخص المراجعة - C++ Learning Lab</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+            line-height: 1.6;
+            background-color: #f8f9fa;
+            color: #212529;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: auto;
+            background-color: #ffffff;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 40px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        h1, h2, h3, h4 {
+            color: #0056b3; /* A nice blue for headings */
+            border-bottom: 2px solid #e9ecef;
+            padding-bottom: 10px;
+            margin-top: 24px;
+        }
+        h1 { font-size: 2em; }
+        h2 { font-size: 1.75em; }
+        h3 { font-size: 1.5em; }
+        h4 { font-size: 1.25em; color: #007bff; border-bottom: none; }
+        p {
+            margin-bottom: 1em;
+        }
+        code {
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+            background-color: #e9ecef;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+        pre {
+            background-color: #282c34; /* Dark background for code blocks */
+            color: #abb2bf; /* Light text for code blocks */
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+        }
+        pre code {
+            background-color: transparent;
+            padding: 0;
+        }
+        strong {
+            color: #d9534f; /* A reddish color for emphasis */
+        }
+        .summary {
+            background-color: #fff3cd; /* Light yellow for summary box */
+            border-left: 5px solid #ffeeba;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>ملخص المراجعة: رحلة البيانات من سطر نصي إلى سجل منظم</h1>
+        <p>اليوم، قمنا بربط كل المهارات التي تعلمناها سابقاً لنحل مشكلة أساسية في البرمجة: كيف نأخذ بيانات خام (سطر نصي) ونحولها إلى شيء منظم ومفهوم للكمبيوتر (<code>struct</code>).</p>
+
+        <h2>أولاً: الأدوات التي كانت في جعبتنا</h2>
+        <p>قبل أن نبدأ، كان لدينا بالفعل أداتان قويتان قمنا ببنائهما سابقاً:</p>
+
+        <h4>1. الأداة الأولى: <code>struct sClient</code> (قالب البيانات)</h4>
+        <p><strong>ما هو؟</strong> هو ببساطة قالب أو "بطاقة تعريف" فارغة قمنا بتصميمها لتمثل أي عميل بنك.</p>
+        <p><strong>لماذا؟</strong> بدلاً من التعامل مع متغيرات متناثرة، يجمع لنا كل معلومات العميل في مكان واحد منظم.</p>
+        <pre><code>// هذا هو القالب الذي سنصب فيه البيانات
+struct sClient {
+    string AccountNumber;
+    string PinCode;
+    string Name;
+    string Phone;
+    double AccountBalance;
+};</code></pre>
+
+        <h4>2. الأداة الثانية: <code>SplitString</code> (مِشرط الجرّاح)</h4>
+        <p><strong>ما هي؟</strong> هي الدالة التي أتقنتِها تماماً. وظيفتها هي أخذ أي سلسلة نصية وتقطيعها إلى أجزاء صغيرة بناءً على فاصل معين.</p>
+        <p><strong>لماذا؟</strong> لأن البيانات في السطر النصي مدمجة معاً، ونحتاج لهذه الأداة لفصل كل معلومة عن الأخرى.</p>
+
+        <h2>ثانياً: حل المشكلة الكبرى - <code>ConvertLinetoRecord</code></h2>
+        <p>هذه هي الدالة المحورية التي عملنا عليها اليوم. هدفها هو استخدام الأدوات السابقة لتحويل سطر بيانات إلى سجل عميل مكتمل. لنرَ كيف تعمل خطوة بخطوة:</p>
+        
+        <h3>المدخلات (Input):</h3>
+        <pre><code>string Line = "A150#//#1234#//#Mohammed#//#079999#//#5270.00";</code></pre>
+
+        <hr>
+
+        <h3>الخطوة 1: استدعاء أداة التقطيع <code>SplitString</code></h3>
+        <p>نقوم أولاً بتمرير السطر الكامل إلى دالتنا <code>SplitString</code> لتقوم بتفكيكه.</p>
+        <pre><code>// داخل دالة ConvertLinetoRecord
+vector&lt;string&gt; vClientData = SplitString(Line, "#//#");</code></pre>
+        <p><strong>النتيجة:</strong> أصبح لدينا الآن <code>vector</code> يحتوي على كل معلومة في خانة منفصلة:</p>
+        <pre><code>vClientData = [ "A150", "1234", "Mohammed", "079999", "5270.00" ]
+                   ^       ^         ^           ^           ^
+                  [0]     [1]       [2]         [3]         [4]</code></pre>
+        
+        <h3>الخطوة 2: إنشاء <code>struct</code> فارغ وتعبئته من الـ <code>vector</code></h3>
+        <p>الآن بعد أن أصبحت البيانات مفصولة ومنظمة، يمكننا بسهولة تعبئة قالب <code>sClient</code> الخاص بنا.</p>
+        <pre><code>// 1. نُنشئ "بطاقة تعريف" فارغة
+sClient Client;
+
+// 2. نبدأ عملية التعبئة بالترتيب، عنصر تلو الآخر</code></pre>
+        
+        <h4>عملية "صب" البيانات:</h4>
+        <pre>
+vClientData[0] ("A150")    -------------------&gt; Client.AccountNumber
+vClientData[1] ("1234")    -------------------&gt; Client.PinCode
+vClientData[2] ("Mohammed")-------------------&gt; Client.Name
+vClientData[3] ("079999")  -------------------&gt; Client.Phone
+vClientData[4] ("5270.00") --- (stod) ---&gt; Client.AccountBalance
+        </pre>
+        <p><strong>ملاحظة خاصة:</strong> لاحظي السهم الأخير. لأن <code>AccountBalance</code> هو رقم (<code>double</code>) والقيمة في الـ <code>vector</code> هي نص (<code>string</code>)، استخدمنا دالة جاهزة اسمها <code>stod</code> (<strong>st</strong>ring <strong>to</strong> <strong>d</strong>ouble) لتقوم بعملية التحويل الضرورية.</p>
+
+        <h3>المخرجات (Output):</h3>
+        <p>في النهاية، تُرجع الدالة <code>Client</code>، الذي لم يعد فارغاً، بل هو <code>struct</code> مكتمل ومنظم يحتوي على جميع بيانات العميل وجاهز للاستخدام.</p>
+
+        <div class="summary">
+            <h3>الخلاصة النهائية</h3>
+            <p>المهارة الحقيقية التي تعلمناها اليوم هي <strong>"تجميع الأدوات"</strong>. لم نكتب دالة معقدة من الصفر، بل قمنا ببناء دالة (<code>ConvertLinetoRecord</code>) تستخدم بذكاء دالة أخرى أبسط (<code>SplitString</code>) لإنجاز مهمتها. هذا المفهوم (إعادة استخدام الكود وتجزئة المشاكل) هو جوهر البرمجة الفعالة والنظيفة.</p>
+        </div>
+    </div>
+</body>
+</html>

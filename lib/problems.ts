@@ -1591,7 +1591,6 @@ function genStructToLineSteps(separator: string): Step[] {
 function genLineToStructSteps(line: string): Step[] {
     const steps: Step[] = [];
     const separator = "#//#";
-    let s1 = line;
     let vString: string[] = [];
     let stepCounter = 0;
 
@@ -1602,42 +1601,36 @@ function genLineToStructSteps(line: string): Step[] {
         code: `vClientData = SplitString(Line, "${separator}");`,
         explanation: 'Start by splitting the input line into tokens using the SplitString function.',
         input: line,
-        modified: s1,
         mem: [],
         vectorContents: [...vString],
     });
 
-    while (s1.includes(separator)) {
-        const pos = s1.indexOf(separator);
-        const sWord = s1.substring(0, pos);
-        if (sWord) vString.push(sWord);
+    const parts = line.split(separator);
+    for (const part of parts) {
+        vString.push(part);
         steps.push({
             i: stepCounter++,
             phase: 'split',
             code: `// Inside SplitString loop...`,
-            explanation: `Found token "${sWord}" and added it to the vector.`,
+            explanation: `Found token "${part}" and added it to the vector.`,
             input: line,
-            modified: s1.substring(pos + separator.length),
             mem: [],
             vectorContents: [...vString],
         });
-        s1 = s1.substring(pos + separator.length);
     }
-    if (s1) vString.push(s1);
 
     steps.push({
         i: stepCounter++,
         phase: 'split',
         code: `// Splitting complete`,
-        explanation: `The line has been split into ${vString.length} tokens.`,
+        explanation: `The line has been split into ${vString.length} tokens. The vector is now ready.`,
         input: line,
-        modified: '',
         mem: [],
         vectorContents: [...vString],
     });
-
+    
     // --- Phase 2: Assign Vector elements to Struct fields ---
-    const Client: any = { AccountNumber: "", PinCode: "", Name: "", Phone: "", AccountBalance: 0.0 };
+    let Client: any = { AccountNumber: "", PinCode: "", Name: "", Phone: "", AccountBalance: null };
     const fields: ('AccountNumber' | 'PinCode' | 'Name' | 'Phone' | 'AccountBalance')[] = ['AccountNumber', 'PinCode', 'Name', 'Phone', 'AccountBalance'];
     
     steps.push({
@@ -1646,9 +1639,9 @@ function genLineToStructSteps(line: string): Step[] {
         code: `sClient Client;`,
         explanation: 'An empty sClient struct is created in memory.',
         input: line,
-        modified: '',
         mem: [`Client struct is empty`],
         vectorContents: [...vString],
+        search: { target: '', currentIndex: -1, found: false, resultClient: { ...Client } }
     });
 
     for (let i = 0; i < fields.length; i++) {
@@ -1672,6 +1665,7 @@ function genLineToStructSteps(line: string): Step[] {
             modified: value,
             mem: [`Client.${fieldName} = ${Client[fieldName]}`],
             vectorContents: [...vString],
+            search: { target: '', currentIndex: -1, found: false, resultClient: { ...Client } }
         });
     }
 
@@ -1681,28 +1675,30 @@ function genLineToStructSteps(line: string): Step[] {
         i: -1,
         phase: 'print',
         code: `PrintClientRecord(Client);`,
-        explanation: `Now, print the data from the populated struct.`,
+        explanation: `The struct is now fully populated. The program will print its contents.`,
         input: line,
-        modified: '',
         output: [],
         mem: [`Client is fully populated.`],
         vectorContents: [...vString],
+        search: { target: '', currentIndex: -1, found: false, resultClient: { ...Client } }
     });
     
-    finalOutput.push(`Accout Number: ${Client.AccountNumber}`);
-    steps.push({ i: -1, phase: 'print', field: 'AccountNumber', code: `cout << Client.AccountNumber;`, explanation: `Printing AccountNumber.`, input: line, output: [...finalOutput], mem: [], vectorContents: [...vString] });
-    
-    finalOutput.push(`Pin Code: ${Client.PinCode}`);
-    steps.push({ i: -1, phase: 'print', field: 'PinCode', code: `cout << Client.PinCode;`, explanation: `Printing PinCode.`, input: line, output: [...finalOutput], mem: [], vectorContents: [...vString] });
-    
-    finalOutput.push(`Name: ${Client.Name}`);
-    steps.push({ i: -1, phase: 'print', field: 'Name', code: `cout << Client.Name;`, explanation: `Printing Name.`, input: line, output: [...finalOutput], mem: [], vectorContents: [...vString] });
-
-    finalOutput.push(`Phone: ${Client.Phone}`);
-    steps.push({ i: -1, phase: 'print', field: 'Phone', code: `cout << Client.Phone;`, explanation: `Printing Phone.`, input: line, output: [...finalOutput], mem: [], vectorContents: [...vString] });
-
-    finalOutput.push(`Account Balance: ${Client.AccountBalance}`);
-    steps.push({ i: -1, phase: 'print', field: 'AccountBalance', code: `cout << Client.AccountBalance;`, explanation: `Printing AccountBalance.`, input: line, output: [...finalOutput], mem: [], vectorContents: [...vString] });
+    for (const fieldName of fields) {
+        const readableFieldName = fieldName.replace(/([A-Z])/g, ' $1').trim();
+        finalOutput.push(`${readableFieldName.padEnd(15)}: ${Client[fieldName]}`);
+        steps.push({ 
+            i: -1, 
+            phase: 'print', 
+            field: fieldName, 
+            code: `cout << Client.${fieldName};`, 
+            explanation: `Printing ${fieldName}.`, 
+            input: line, 
+            output: [...finalOutput], 
+            mem: [], 
+            vectorContents: [...vString],
+            search: { target: '', currentIndex: -1, found: false, resultClient: { ...Client } } 
+        });
+    }
 
     steps.push({
         i: -1,
@@ -1712,7 +1708,8 @@ function genLineToStructSteps(line: string): Step[] {
         output: [...finalOutput],
         mem: ['Done'],
         vectorContents: [...vString],
-      });
+        search: { target: '', currentIndex: -1, found: false, resultClient: { ...Client } }
+    });
 
     return steps;
 }
@@ -2495,10 +2492,10 @@ function genUpdateClientByAccountNumberSteps(accountNumber: string): Step[] {
             mem: [`Comparing with index ${i}`],
             vectorContents: [...vClients],
             fileContents: [...fileContents],
-            update: { target: accountNumber, found: false, confirmed: null }
+            update: { target: accountNumber, found: false, confirmed: null, clientBefore: C }
         });
         if (match) {
-            foundClient = { ...C };
+            foundClient = { ...C }; // Clone it
             foundIndex = i;
             break;
         }
@@ -2519,7 +2516,6 @@ function genUpdateClientByAccountNumberSteps(accountNumber: string): Step[] {
             update: { target: accountNumber, found: false, confirmed: null }
         });
     } else {
-        const clientBefore = { ...foundClient };
         steps.push({
             i: foundIndex,
             phase: 'find_client',
@@ -2529,7 +2525,7 @@ function genUpdateClientByAccountNumberSteps(accountNumber: string): Step[] {
             mem: [`Found client: "${foundClient.Name}"`],
             vectorContents: [...vClients],
             fileContents: [...fileContents],
-            update: { target: accountNumber, found: true, confirmed: null, clientBefore }
+            update: { target: accountNumber, found: true, confirmed: null, clientBefore: foundClient }
         });
 
         // --- Confirm Update ---
@@ -2538,13 +2534,13 @@ function genUpdateClientByAccountNumberSteps(accountNumber: string): Step[] {
             i: stepCounter++,
             phase: 'confirm_update',
             code: `PrintClientCard(Client);`,
-            explanation: `Displaying client details before asking for confirmation.`,
+            explanation: `Displaying client's current details before asking for confirmation.`,
             input: accountNumber,
             output: [...output],
             mem: [`Printing client card`],
             vectorContents: [...vClients],
             fileContents: [...fileContents],
-            update: { target: accountNumber, found: true, confirmed: null, clientBefore }
+            update: { target: accountNumber, found: true, confirmed: null, clientBefore: foundClient }
         });
 
         output.push(`\n\nAre you sure you want update this client? y/n ? `);
@@ -2558,95 +2554,67 @@ function genUpdateClientByAccountNumberSteps(accountNumber: string): Step[] {
             mem: [`Answer = 'y'`],
             vectorContents: [...vClients],
             fileContents: [...fileContents],
-            update: { target: accountNumber, found: true, confirmed: true, clientBefore }
+            update: { target: accountNumber, found: true, confirmed: true, clientBefore: foundClient }
         });
         
-        // --- Read New Data ---
-        let clientAfter = { ...clientBefore };
+        // --- Read New Data & Update Vector ---
+        let clientAfter = { ...foundClient };
         steps.push({
             i: stepCounter++,
             phase: 'read_new_data',
-            code: `C = ChangeClientRecord(AccountNumber);`,
-            explanation: 'Simulating user entering new data for the client.',
+            code: `ReadNewClient(vClients[${foundIndex}]);`,
+            explanation: `Simulating reading new client information. Account number cannot be changed.`,
             input: accountNumber,
-            mem: ['Reading new client info'],
+            mem: [`Reading new data`],
             vectorContents: [...vClients],
             fileContents: [...fileContents],
-            update: { target: accountNumber, found: true, confirmed: true, clientBefore }
+            update: { target: accountNumber, found: true, confirmed: true, clientBefore: foundClient }
         });
 
         Object.entries(newData).forEach(([key, value]) => {
-            (clientAfter as any)[key] = value;
+            const field = key as keyof typeof newData;
+            (clientAfter as any)[field] = value;
             steps.push({
-                i: stepCounter++,
-                phase: 'read_new_data',
-                field: key as any,
-                code: `// Reading new ${key}...`,
-                explanation: `Simulated input for ${key}: "${value}".`,
+                i: foundIndex,
+                phase: 'update_vector',
+                field: field,
+                code: `// Reading ${field}...`,
+                explanation: `Simulated new input for ${field}: "${value}". Updating struct in vector.`,
                 input: accountNumber,
-                mem: [`New ${key} = ${value}`],
-                vectorContents: [...vClients],
+                mem: [`vClients[${foundIndex}].${field} = ${value}`],
+                vectorContents: [...vClients.slice(0, foundIndex), clientAfter, ...vClients.slice(foundIndex+1)],
                 fileContents: [...fileContents],
-                update: { target: accountNumber, found: true, confirmed: true, clientBefore, clientAfter: { ...clientAfter } }
+                update: { target: accountNumber, found: true, confirmed: true, clientBefore: foundClient, clientAfter: clientAfter }
             });
         });
-
-        // --- Update Vector ---
+        
         vClients[foundIndex] = clientAfter;
-        steps.push({
-            i: foundIndex,
-            phase: 'update_vector',
-            code: `// Update client in vector`,
-            explanation: `Updating the client record at index ${foundIndex} in the memory vector.`,
-            input: accountNumber,
-            mem: [`Updated "${clientAfter.Name}" in vector`],
-            vectorContents: [...vClients],
-            fileContents: [...fileContents],
-            update: { target: accountNumber, found: true, confirmed: true, clientBefore, clientAfter }
-        });
         
         // --- Save to File ---
-        const newFileContents: string[] = [];
         steps.push({
             i: stepCounter++,
             phase: 'save_to_file',
             code: `SaveCleintsDataToFile(ClientsFileName, vClients);`,
-            explanation: `Opening "Clients.txt" in write mode (ios::out) to overwrite it.`,
+            explanation: `Opening "Clients.txt" in write mode (ios::out) to overwrite with updated data.`,
             input: accountNumber,
             mem: [`Opening file for overwrite`],
             vectorContents: [...vClients],
             fileContents: [...fileContents],
-            update: { target: accountNumber, found: true, confirmed: true, clientBefore, clientAfter }
+            update: { target: accountNumber, found: true, confirmed: true, clientBefore: foundClient, clientAfter: clientAfter }
         });
         
-        for(let i = 0; i < vClients.length; i++) {
-            const C = vClients[i];
-            const line = `${C.AccountNumber}${separator}${C.PinCode}${separator}${C.Name}${separator}${C.Phone}${separator}${C.AccountBalance}`;
-            newFileContents.push(line);
-            steps.push({
-                i: i,
-                phase: 'save_to_file',
-                code: `MyFile << DataLine << endl;`,
-                explanation: `Writing record for "${C.Name}" to the file.`,
-                input: accountNumber,
-                mem: [`Writing line for ${C.AccountNumber}`],
-                vectorContents: [...vClients],
-                fileContents: [...newFileContents],
-                update: { target: accountNumber, found: true, confirmed: true, clientBefore, clientAfter }
-            });
-        }
-        fileContents = newFileContents;
-
+        fileContents = vClients.map(C => `${C.AccountNumber}${separator}${C.PinCode}${separator}${C.Name}${separator}${C.Phone}${separator}${C.AccountBalance}`);
+        
         steps.push({
             i: stepCounter++,
             phase: 'save_to_file',
-            code: `MyFile.close();`,
-            explanation: `Finished writing. Closing the file. The client has now been permanently updated in the file.`,
+            code: `// Writing all records to file`,
+            explanation: `Writing all ${vClients.length} records back to the file, including the updated one.`,
             input: accountNumber,
-            mem: [`File closed`],
+            mem: [`Writing to file...`],
             vectorContents: [...vClients],
             fileContents: [...fileContents],
-            update: { target: accountNumber, found: true, confirmed: true, clientBefore, clientAfter }
+            update: { target: accountNumber, found: true, confirmed: true, clientBefore: foundClient, clientAfter: clientAfter }
         });
 
         output.push(`\n\nClient Updated Successfully.`);
@@ -2660,7 +2628,6 @@ function genUpdateClientByAccountNumberSteps(accountNumber: string): Step[] {
             mem: [`Update successful`],
             vectorContents: [...vClients],
             fileContents: [...fileContents],
-            update: { target: accountNumber, found: true, confirmed: true, clientBefore, clientAfter }
         });
     }
 
@@ -2678,717 +2645,282 @@ function genUpdateClientByAccountNumberSteps(accountNumber: string): Step[] {
     return steps;
 }
 
+function genSplitStringCustomDelimSteps(str: string): Step[] {
+  const steps: Step[] = [];
+  let s1 = str;
+  let vString: string[] = [];
+  const delim = "#//#";
+  let stepCounter = 0;
 
+  steps.push({
+    i: stepCounter++,
+    code: `vector<string> vString;`,
+    explanation: `Initialize an empty vector. The delimiter is "${delim}".`,
+    input: str,
+    modified: s1,
+    mem: [`Delimiter = "${delim}"`],
+    vectorContents: [...vString],
+  });
+
+  while (true) {
+    const pos = s1.indexOf(delim);
+
+    steps.push({
+      i: stepCounter++,
+      code: `pos = S1.find("${delim}")`,
+      explanation: `Search for delimiter "${delim}". Found at index: ${pos}. (string::npos is -1)`,
+      input: str,
+      modified: s1,
+      mem: [`pos = ${pos}`],
+      vectorContents: [...vString],
+    });
+    
+    steps.push({
+      i: stepCounter++,
+      code: `while (pos != std::string::npos)`,
+      explanation: `Check loop condition: ${pos} != -1. Condition is ${pos !== -1 ? 'true, continue loop' : 'false, exit loop'}.`,
+      input: str,
+      modified: s1,
+      mem: [`Continue loop? ${pos !== -1}`],
+      vectorContents: [...vString],
+    });
+    
+    if (pos === -1) {
+      break; 
+    }
+
+    const sWord = s1.substring(0, pos);
+    steps.push({
+      i: stepCounter++,
+      code: `sWord = S1.substr(0, ${pos});`,
+      explanation: `Extract the part before the delimiter using substr. The token is "${sWord}".`,
+      input: str,
+      modified: s1,
+      mem: [`sWord = "${sWord}"`],
+      vectorContents: [...vString],
+    });
+
+    if (sWord !== "") {
+        vString.push(sWord);
+        steps.push({
+          i: stepCounter++,
+          code: `vString.push_back(sWord);`,
+          explanation: `The token "${sWord}" is not empty. Add it to the vector.`,
+          input: str,
+          modified: s1,
+          mem: [],
+          vectorContents: [...vString],
+        });
+    }
+
+    const s1BeforeErase = s1;
+    s1 = s1.substring(pos + delim.length);
+    steps.push({
+      i: stepCounter++,
+      code: `S1.erase(0, ${pos} + ${delim.length});`,
+      explanation: `Erase the processed token and the delimiter from the string.`,
+      input: str,
+      modified: s1,
+      mem: [`S1 was: "${s1BeforeErase}"`, `S1 is now: "${s1}"`],
+      vectorContents: [...vString],
+    });
+  }
+
+  // After loop
+  if (s1 !== "") {
+    vString.push(s1);
+    steps.push({
+      i: stepCounter++,
+      code: `vString.push_back(S1);`,
+      explanation: `Loop finished. Add the last remaining part "${s1}" to the vector.`,
+      input: str,
+      modified: s1,
+      mem: [],
+      vectorContents: [...vString],
+    });
+  } else {
+    steps.push({
+      i: stepCounter++,
+      code: `// After loop`,
+      explanation: `Loop finished. No remaining characters to add.`,
+      input: str,
+      modified: s1,
+      mem: [`S1 is empty.`],
+      vectorContents: [...vString],
+    });
+  }
+
+  steps.push({
+    i: stepCounter++,
+    code: 'return vString;',
+    explanation: `Function finished. The vector now contains ${vString.length} tokens and is returned.`,
+    input: str,
+    modified: s1,
+    output: vString,
+    mem: [`size=${vString.length}`],
+    vectorContents: [...vString],
+  });
+
+  return steps;
+}
+
+function genFilterWordsByLengthSteps(combinedStr: string): Step[] {
+  const parts = combinedStr.split('|');
+  if (parts.length !== 2) {
+    return [{ i: -1, code: 'Error', explanation: 'Input must be in the format "sentence|max_length", e.g., "this is a test|4"', input: combinedStr, mem: [] }];
+  }
+  const sentence = parts[0];
+  const maxLength = parseInt(parts[1], 10);
+
+  if (isNaN(maxLength)) {
+    return [{ i: -1, code: 'Error', explanation: `Invalid max length provided: "${parts[1]}". It must be a number.`, input: combinedStr, mem: [] }];
+  }
+
+  const steps: Step[] = [];
+  let stepCounter = 0;
+  const words = sentence.split(' ').filter(Boolean); // Split and remove empty strings
+  let output: string[] = [];
+  
+  steps.push({
+    i: stepCounter++,
+    code: `string sentence = "${sentence}";\nint maxLength = ${maxLength};`,
+    explanation: `Start with the sentence and the maximum word length.`,
+    input: combinedStr,
+    modified: sentence,
+    mem: [`maxLength = ${maxLength}`]
+  });
+  
+  steps.push({
+    i: stepCounter++,
+    phase: 'split',
+    code: `vector<string> words = SplitString(sentence, " ");`,
+    explanation: `Split the sentence into a vector of words.`,
+    input: combinedStr,
+    mem: [],
+    vectorContents: words
+  });
+  
+  steps.push({
+    i: stepCounter++,
+    code: `for (const string& word : words)`,
+    explanation: 'Begin iterating through the vector of words.',
+    input: combinedStr,
+    mem: ['Starting loop'],
+    vectorContents: words
+  });
+  
+  for (let i = 0; i < words.length; i++) {
+    const word = words[i];
+    const isShortEnough = word.length <= maxLength;
+
+    steps.push({
+      i: i,
+      phase: 'check',
+      code: `if (word.length() <= ${maxLength})`,
+      explanation: `Checking word "${word}". Is its length (${word.length}) less than or equal to ${maxLength}? ${isShortEnough ? 'Yes' : 'No'}.`,
+      input: combinedStr,
+      mem: [`Checking "${word}" (length ${word.length})`],
+      vectorContents: words
+    });
+    
+    if (isShortEnough) {
+      output.push(word);
+      steps.push({
+        i: i,
+        phase: 'print',
+        code: `cout << word << endl;`,
+        explanation: `Yes, the condition is met. Printing the word "${word}".`,
+        input: combinedStr,
+        output: [...output],
+        mem: [`Printed "${word}"`],
+        vectorContents: words
+      });
+    }
+  }
+
+  steps.push({
+    i: stepCounter++,
+    code: 'return 0;',
+    explanation: 'Finished iterating through all words.',
+    input: combinedStr,
+    output: [...output],
+    mem: ['Done'],
+    vectorContents: words
+  });
+
+  return steps;
+}
 
 export const problems: Problem[] = [
-  { id: 1, title: 'Problem 1 — Print First Letter of Each Word', description: 'Read a string and print the first letter of every word.', example: 'programming is fun', generator: genPrintFirstLettersSteps, functions: [
-    {name: 'ReadString()', signature: 'string ReadString()', explanation: 'Reads a full line including spaces.', code: `string ReadString()\n{\n    string S1;\n    getline(cin, S1);\n    return S1;\n}`},
-    {name: 'PrintFirstLetterOfEachWord(string S1)', signature: 'void PrintFirstLetterOfEachWord(string S1)', explanation: 'Uses a boolean flag to detect word starts.', code: `void PrintFirstLetterOfEachWord(string S1)\n{\n    bool isFirstLetter = true;\n    for(short i=0;i<S1.length();i++){\n        if(S1[i] != ' ' && isFirstLetter) cout << S1[i];\n        isFirstLetter = (S1[i] == ' ' ? true : false);\n    }\n}`}
-  ], keyConcepts: ['String Iteration', 'Boolean Flags', 'Conditional Logic', 'Character I/O'],
-  hints: [
-      'You need a way to remember if the previous character was a space.',
-      'A boolean flag (e.g., `isFirstLetter`) can track this state.',
-      'Inside the loop, check two conditions: is the character not a space, AND is the `isFirstLetter` flag true?',
-      'After checking a character, update the flag for the *next* iteration. The flag should be true only if the *current* character is a space.'
-  ]},
-  { id: 2, title: 'Problem 2 — Uppercase First Letter of Each Word', description: 'Uppercase the first character of each word in the input.', example: 'hello world', generator: genUpperFirstSteps, functions: [
-    {name: 'UpperFirstLetterOfEachWord', signature: 'string UpperFirstLetterOfEachWord(string S1)', explanation: 'Uses toupper on flagged positions.', code: `string UpperFirstLetterOfEachWord(string S1)\n{\n    bool isFirstLetter = true;\n    for(short i=0;i<S1.length();i++){\n        if(S1[i] != ' ' && isFirstLetter) S1[i] = toupper(S1[i]);\n        isFirstLetter = (S1[i] == ' ' ? true : false);\n    }\n    return S1;\n}`}
-  ], keyConcepts: ['String Modification', 'Boolean Flags', 'toupper()', 'By-Value vs By-Reference'],
-  hints: [
-      'The logic is nearly identical to the previous problem (printing the first letter).',
-      'Instead of printing the character with `cout`, modify it in place.',
-      'The `toupper()` function from the `<cctype>` library will convert a character to its uppercase equivalent.',
-      'Remember to assign the result back to the string: `S1[i] = toupper(S1[i]);`'
-  ]},
-  { id: 3, title: 'Problem 3 — Lowercase First Letter of Each Word', description: 'Lowercase the first character of each word in the input.', example: 'HELLO WORLD', generator: genLowerFirstSteps, functions: [
-    {name: 'LowerFirstLetterOfEachWord', signature: 'string LowerFirstLetterOfEachWord(string S1)', explanation: 'Uses tolower on flagged positions.', code: `string LowerFirstLetterOfEachWord(string S1)\n{\n    bool isFirstLetter = true;\n    for(short i=0;i<S1.length();i++){\n        if(S1[i] != ' ' && isFirstLetter) S1[i] = tolower(S1[i]);\n        isFirstLetter = (S1[i] == ' ' ? true : false);\n    }\n    return S1;\n}`}
-  ], keyConcepts: ['String Modification', 'Boolean Flags', 'tolower()', 'Standard Library Functions'],
-   hints: [
-      'This problem is a variation of the previous one.',
-      'Instead of `toupper()`, use the `tolower()` function to convert characters to lowercase.',
-      'The boolean flag logic for detecting the start of a word remains exactly the same.'
-  ]},
-  { id: 4, title: 'Problem 4 — Upper All then Lower All Letters', description: 'Read a string, print it uppercased, then print it lowercased.', example: 'Hello World', generator: genUpperThenLowerSteps, functions: [
-    {name: 'ReadString()', signature: 'string ReadString()', explanation: 'Reads the full line.', code: `string ReadString()\n{\n    string S1;\n    getline(cin, S1);\n    return S1;\n}`},
-    {name: 'UpperAllString', signature: 'string UpperAllString(string S1)', explanation: 'Makes every char uppercase using toupper.', code: `string UpperAllString(string S1)\n{\n    for(short i=0;i<S1.length();i++) S1[i] = toupper(S1[i]);\n    return S1;\n}`},
-    {name: 'LowerAllString', signature: 'string LowerAllString(string S1)', explanation: 'Makes every char lowercase using tolower.', code: `string LowerAllString(string S1)\n{\n    for(short i=0;i<S1.length();i++) S1[i] = tolower(S1[i]);\n    return S1;\n}`}
-  ], keyConcepts: ['Looping', 'Case Conversion', 'Multiple Operations', 'Sequential Execution'],
-  hints: [
-      'You will need two separate loops for this task.',
-      'The first loop should iterate through the string and apply `toupper()` to every character.',
-      'The second loop should do the same, but with `tolower()`.',
-      'You can create two separate functions to keep the code clean: one for uppercasing and one for lowercasing.'
-  ]},
-  { id: 5, title: 'Problem 5 — Invert Letter Case', description: 'Read a single character, invert its case (upper to lower, lower to upper), and print the result.', example: 'a', generator: genInvertCaseSteps, functions: [
-    { name: 'ReadChar()', signature: 'char ReadChar()', explanation: 'Reads a single character from the input.', code: `char ReadChar()\n{\n    char Ch1;\n    cout << "Please Enter a Character?\\n";\n    cin >> Ch1;\n    return Ch1;\n}` },
-    { name: 'InvertLetterCase(char char1)', signature: 'char InvertLetterCase(char char1)', explanation: 'Checks if a character is uppercase. If so, it converts it to lowercase. Otherwise, it converts it to uppercase.', code: `char InvertLetterCase(char char1)\n{\n    return isupper(char1) ? tolower(char1) : toupper(char1);\n}` }
-  ], keyConcepts: ['Character I/O', 'Ternary Operator', 'Case Conversion', 'ASCII Values'],
-  hints: [
-      'First, you need to determine if the character is currently uppercase or lowercase.',
-      'The `isupper()` function from `<cctype>` returns true if a character is uppercase.',
-      'A simple `if/else` statement or a ternary operator (`condition ? value_if_true : value_if_false`) is perfect for this.',
-      'If `isupper()` is true, use `tolower()`. Otherwise, use `toupper()`.'
-  ]},
-  { id: 6, title: 'Problem 6 — Count Small/Capital Letters', description: 'Read a string and count the number of lowercase and uppercase letters.', example: 'Hello World', generator: genCountCaseSteps, functions: [
-    { name: 'ReadString()', signature: 'string ReadString()', explanation: 'Reads a full line including spaces.', code: `string ReadString()\n{\n    string S1;\n    cout << "Please Enter Your String?\\n";\n    getline(cin, S1);\n    return S1;\n}` },
-    { name: 'CountCapitalLetters(string S1)', signature: 'short CountCapitalLetters(string S1)', explanation: 'Iterates through the string and increments a counter for each uppercase character found.', code: `short CountCapitalLetters(string S1)\n{\n    short Counter = 0;\n    for (short i = 0; i < S1.length(); i++)\n    {\n        if (isupper(S1[i]))\n            Counter++;\n    }\n    return Counter;\n}` },
-    { name: 'CountSmallLetters(string S1)', signature: 'short CountSmallLetters(string S1)', explanation: 'Iterates through the string and increments a counter for each lowercase character found.', code: `short CountSmallLetters(string S1)\n{\n    short Counter = 0;\n    for (short i = 0; i < S1.length(); i++)\n    {\n        if (islower(S1[i]))\n            Counter++;\n    }\n    return Counter;\n}` }
-  ], keyConcepts: ['String Iteration', 'Counters', 'isupper()', 'islower()', 'Conditional Logic'],
-  hints: [
-    'You will need two counter variables, one for capital letters and one for small letters, both initialized to 0.',
-    'Loop through each character of the string.',
-    'Inside the loop, use `isupper()` to check for capitals and `islower()` for smalls.',
-    'Increment the appropriate counter when a match is found.'
-  ]},
-  { id: 7, title: 'Problem 7 — Count a Specific Letter', description: 'Read a string and a character, then count how many times that character appears. Separate string and character with a pipe (|).', example: 'programming is fun|g', generator: genCountLetterSteps, functions: [
-    { name: 'ReadString()', signature: 'string ReadString()', explanation: 'Reads a full line of text from the user.', code: `string ReadString()\n{\n    string S1;\n    cout << "\\nPlease Enter Your String?\\n";\n    getline(cin, S1);\n    return S1;\n}`},
-    { name: 'ReadChar()', signature: 'char ReadChar()', explanation: 'Reads a single character from the user.', code: `char ReadChar()\n{\n    char Ch1;\n    cout << "\\nPlease Enter a Character?\\n";\n    cin >> Ch1;\n    return Ch1;\n}`},
-    { name: 'CountLetter(string S1, char Letter)', signature: 'short CountLetter(string S1, char Letter)', explanation: 'Iterates through the string, compares each character with the target letter, and increments a counter on matches.', code: `short CountLetter(string S1, char Letter)\n{\n    short Counter = 0;\n    for (short i = 0; i < S1.length(); i++)\n    {\n        if (S1[i] == Letter)\n            Counter++;\n    }\n    return Counter;\n}`}
-  ], keyConcepts: ['String Iteration', 'Character Comparison', 'Counters', 'Function Parameters'],
-  hints: [
-    'Initialize a counter variable to 0.',
-    'Loop through each character of the input string.',
-    'Inside the loop, use an `if` statement to compare the current character (`S1[i]`) with the target character (`Letter`).',
-    'If they are equal, increment the counter.'
-  ]},
-  { 
-    id: 8, 
-    title: 'Problem 8 — Count a Specific Letter (Case Insensitive)', 
-    description: 'Read a string and a character, then count how many times that character appears, both case-sensitively and case-insensitively. Separate string and character with a pipe (|).', 
-    example: 'Programming is Fun|g', 
-    generator: genCountLetterCaseInsensitiveSteps, 
-    functions: [
-      { 
-        name: 'ReadString()', 
-        signature: 'string ReadString()', 
-        explanation: 'Reads a full line of text from the user.', 
-        code: `string ReadString()\n{\n    string S1;\n    cout << "\\nPlease Enter Your String?\\n";\n    getline(cin, S1);\n    return S1;\n}`
-      },
-      { 
-        name: 'ReadChar()', 
-        signature: 'char ReadChar()', 
-        explanation: 'Reads a single character from the user.', 
-        code: `char ReadChar()\n{\n    char Ch1;\n    cout << "\\nPlease Enter a Character?\\n";\n    cin >> Ch1;\n    return Ch1;\n}`
-      },
-      { 
-        name: 'InvertLetterCase(char char1)', 
-        signature: 'char InvertLetterCase(char char1)', 
-        explanation: 'Checks if a character is uppercase. If so, it converts it to lowercase. Otherwise, it converts it to uppercase.', 
-        code: `char InvertLetterCase(char char1)\n{\n    return isupper(char1) ? tolower(char1) : toupper(char1);\n}` 
-      },
-      { 
-        name: 'CountLetter(string S1, char Letter, bool MatchCase = true)', 
-        signature: 'short CountLetter(string S1, char Letter, bool MatchCase = true)', 
-        explanation: 'Iterates through the string, compares each character with the target letter (case-sensitively or not based on MatchCase flag), and increments a counter on matches.', 
-        code: `short CountLetter(string S1, char Letter, bool MatchCase = true)\n{\n    short Counter = 0;\n    for (short i = 0; i < S1.length(); i++)\n    {\n        if (MatchCase)\n        {\n            if (S1[i] == Letter)\n                Counter++;\n        }\n        else\n        {\n            if (tolower(S1[i]) == tolower(Letter))\n                Counter++;\n        }\n    }\n    return Counter;\n}`
-      }
-    ], 
-    keyConcepts: ['String Iteration', 'Character Comparison', 'Counters', 'Case Insensitivity', 'Optional Parameters'],
-    hints: [
-      'The case-sensitive part is the same as the previous problem.',
-      'For the case-insensitive count, you need to standardize the case before comparing.',
-      'A good strategy is to convert both the character from the string (`S1[i]`) and the target character (`Letter`) to the same case (e.g., lowercase) before the `if` check.',
-      'Use `tolower()` on both sides of the comparison: `if (tolower(S1[i]) == tolower(Letter))`.',
-      'Consider adding an optional boolean parameter to your function to control whether the search is case-sensitive or not.'
-    ]
-  },
-  { 
-    id: 9, 
-    title: 'Problem 9 — Check if a Character is a Vowel', 
-    description: 'Read a character and check if it is a vowel (a, e, i, o, u). The check should be case-insensitive.', 
-    example: 'A', 
-    generator: genIsVowelSteps, 
-    functions: [
-      { 
-        name: 'ReadChar()', 
-        signature: 'char ReadChar()', 
-        explanation: 'Reads a single character from the user.', 
-        code: `char ReadChar()\n{\n    char Ch1;\n    cout << "\\nPlease Enter a Character?\\n";\n    cin >> Ch1;\n    return Ch1;\n}`
-      },
-      { 
-        name: 'IsVowel(char Ch1)', 
-        signature: 'bool IsVowel(char Ch1)', 
-        explanation: 'Converts the character to lowercase and checks if it is one of \'a\', \'e\', \'i\', \'o\', or \'u\'.', 
-        code: `bool IsVowel(char Ch1)\n{\n    Ch1 = tolower(Ch1);\n    return ((Ch1 == 'a') || (Ch1 == 'e') || (Ch1 == 'i') || (Ch1 == 'o') || (Ch1 == 'u'));\n}`
-      }
-    ], 
-    keyConcepts: ['Character I/O', 'Boolean Logic', 'tolower()', 'Conditional Statements'],
-    hints: [
-      'To handle case-insensitivity easily, first convert the input character to lowercase using `tolower()`.',
-      'After converting, you only need to check against the five lowercase vowels.',
-      'Use the logical OR operator (`||`) to check if the character matches any of the vowels: `(ch == \'a\') || (ch == \'e\') || ...`'
-    ]
-  },
+  { id: 1, title: 'Problem 1 — Print First Letters', description: 'Write a function to print the first letter of each word in a string.', example: 'Mohammed Abu-Hadhoud', generator: genPrintFirstLettersSteps, functions: [{ name: 'PrintFirstLetterOfEachWord', signature: 'void PrintFirstLetterOfEachWord(string S1)', explanation: 'Iterates through a string, printing the first character after a space or at the beginning.', code: 'void PrintFirstLetterOfEachWord(string S1) {\n bool isFirstLetter = true;\n for (short i = 0; i < S1.length(); i++) {\n  if (S1[i] != \' \' && isFirstLetter) {\n   cout << S1[i];\n  }\n  isFirstLetter = (S1[i] == \' \' ? true : false);\n }\n}' }], keyConcepts: ['string iteration', 'boolean flag', 'conditional logic'] },
+  { id: 2, title: 'Problem 2 — Uppercase First Letters', description: 'Write a function to convert the first letter of each word in a string to uppercase.', example: 'mohammed abu-hadhoud', generator: genUpperFirstSteps, functions: [{ name: 'UpperFirstLetterOfEachWord', signature: 'string UpperFirstLetterOfEachWord(string S1)', explanation: 'Iterates through a string, converting the first character of each word to uppercase.', code: 'string UpperFirstLetterOfEachWord(string S1) {\n bool isFirstLetter = true;\n for (short i = 0; i < S1.length(); i++) {\n  if (S1[i] != \' \' && isFirstLetter) {\n   S1[i] = toupper(S1[i]);\n  }\n  isFirstLetter = (S1[i] == \' \' ? true : false);\n }\n return S1;\n}' }], keyConcepts: ['string modification', 'toupper()', 'boolean flag'] },
+  { id: 3, title: 'Problem 3 — Lowercase First Letters', description: 'Write a function to convert the first letter of each word in a string to lowercase.', example: 'Mohammed Abu-Hadhoud', generator: genLowerFirstSteps, functions: [{ name: 'LowerFirstLetterOfEachWord', signature: 'string LowerFirstLetterOfEachWord(string S1)', explanation: 'Iterates through a string, converting the first character of each word to lowercase.', code: 'string LowerFirstLetterOfEachWord(string S1) {\n bool isFirstLetter = true;\n for (short i = 0; i < S1.length(); i++) {\n  if (S1[i] != \' \' && isFirstLetter) {\n   S1[i] = tolower(S1[i]);\n  }\n  isFirstLetter = (S1[i] == \' \' ? true : false);\n }\n return S1;\n}' }], keyConcepts: ['string modification', 'tolower()', 'boolean flag'] },
+  { id: 4, title: 'Problem 4 — Uppercase & Lowercase All', description: 'Write functions to convert a whole string to uppercase and lowercase.', example: 'MixedCase String', generator: genUpperThenLowerSteps, functions: [{ name: 'UpperAllString', signature: 'string UpperAllString(string S1)', explanation: 'Converts all characters in a string to uppercase.', code: 'string UpperAllString(string S1) {\n for (short i = 0; i < S1.length(); i++) {\n  S1[i] = toupper(S1[i]);\n }\n return S1;\n}' }, { name: 'LowerAllString', signature: 'string LowerAllString(string S1)', explanation: 'Converts all characters in a string to lowercase.', code: 'string LowerAllString(string S1) {\n for (short i = 0; i < S1.length(); i++) {\n  S1[i] = tolower(S1[i]);\n }\n return S1;\n}' }], keyConcepts: ['string modification', 'toupper()', 'tolower()', 'looping'] },
+  { id: 5, title: 'Problem 5 — Invert Letter Case', description: 'Write a function to invert the case of a single character (a -> A, B -> b).', example: 'a', generator: genInvertCaseSteps, functions: [{ name: 'InvertLetterCase', signature: 'char InvertLetterCase(char char1)', explanation: 'Checks if a character is uppercase or lowercase and inverts it.', code: 'char InvertLetterCase(char char1) {\n return isupper(char1) ? tolower(char1) : toupper(char1);\n}' }], keyConcepts: ['char manipulation', 'isupper()', 'ternary operator'] },
+  { id: 6, title: 'Problem 6 — Count Letter Case', description: 'Write a function to count capital and small letters in a string.', example: 'Mohammed Abu-Hadhoud', generator: genCountCaseSteps, functions: [{ name: 'CountCapitalLetters', signature: 'short CountCapitalLetters(string S1)', explanation: 'Counts characters from A-Z.', code: 'short CountCapitalLetters(string S1) {\n short Counter = 0;\n for (short i = 0; i < S1.length(); i++) {\n  if (isupper(S1[i]))\n   Counter++;\n }\n return Counter;\n}' }, { name: 'CountSmallLetters', signature: 'short CountSmallLetters(string S1)', explanation: 'Counts characters from a-z.', code: 'short CountSmallLetters(string S1) {\n short Counter = 0;\n for (short i = 0; i < S1.length(); i++) {\n  if (islower(S1[i]))\n   Counter++;\n }\n return Counter;\n}' }], keyConcepts: ['counting', 'isupper()', 'islower()', 'looping'] },
+  { id: 7, title: 'Problem 7 — Count a Specific Letter', description: 'Write a function to count occurrences of a specific letter in a string.', example: 'hello world|l', generator: genCountLetterSteps, functions: [{ name: 'CountLetter', signature: 'short CountLetter(string S1, char Letter)', explanation: 'Counts how many times a specific character appears in a string (case-sensitive).', code: 'short CountLetter(string S1, char Letter) {\n short Counter = 0;\n for (short i = 0; i < S1.length(); i++) {\n  if (S1[i] == Letter)\n   Counter++;\n }\n return Counter;\n}' }], keyConcepts: ['counting', 'looping', 'comparison'] },
+  { id: 8, title: 'Problem 8 — Count Letter (Case-Insensitive)', description: 'Overload the previous function to be case-sensitive or insensitive.', example: 'Hello World|L', generator: genCountLetterCaseInsensitiveSteps, functions: [{ name: 'CountLetter (Overloaded)', signature: 'short CountLetter(string S1, char Letter, bool MatchCase = true)', explanation: 'Overloaded function to count a letter. If MatchCase is false, it converts both characters to lowercase before comparing.', code: 'short CountLetter(string S1, char Letter, bool MatchCase = true) {\n short Counter = 0;\n for (short i = 0; i < S1.length(); i++) {\n  if (MatchCase) {\n   if (S1[i] == Letter)\n    Counter++;\n  } else {\n   if (tolower(S1[i]) == tolower(Letter))\n    Counter++;\n  }\n }\n return Counter;\n}' }], keyConcepts: ['function overloading', 'boolean parameter', 'case-insensitivity'] },
+  { id: 9, title: 'Problem 9 — Check if Vowel', description: 'Write a function to check if a character is a vowel (a, e, i, o, u).', example: 'A', generator: genIsVowelSteps, functions: [{ name: 'IsVowel', signature: 'bool IsVowel(char Ch1)', explanation: 'Checks if a character is a vowel, ignoring case.', code: 'bool IsVowel(char Ch1) {\n Ch1 = tolower(Ch1);\n return ((Ch1 == \'a\') || (Ch1 == \'e\') || (Ch1 == \'i\') || (Ch1 == \'o\') || (Ch1 == \'u\'));\n}' }], keyConcepts: ['boolean logic', '|| operator', 'char comparison', 'tolower()'] },
+  { id: 10, title: 'Problem 10 — Count Vowels', description: 'Write a function that uses the `IsVowel` function to count all vowels in a string.', example: 'Programming is fun', generator: genCountVowelsSteps, functions: [{ name: 'CountVowels', signature: 'short CountVowels(string S1)', explanation: 'Iterates through a string and uses the IsVowel function to count vowels.', code: 'short CountVowels(string S1) {\n short Counter = 0;\n for (short i = 0; i < S1.length(); i++) {\n  if (IsVowel(S1[i]))\n   Counter++;\n }\n return Counter;\n}' }, { name: 'IsVowel', signature: 'bool IsVowel(char Ch1)', explanation: 'Helper function to check if a character is a vowel.', code: 'bool IsVowel(char Ch1) {\n Ch1 = tolower(Ch1);\n return ((Ch1 == \'a\') || (Ch1 == \'e\') || (Ch1 == \'i\') || (Ch1 == \'o\') || (Ch1 == \'u\'));\n}' }], keyConcepts: ['function composition', 'reusability', 'counting', 'looping'] },
+  { id: 11, title: 'Problem 11 — Print Vowels', description: 'Write a function to print all vowels in a string.', example: 'This is a test', generator: genPrintVowelsSteps, functions: [{ name: 'PrintVowels', signature: 'void PrintVowels(string S1)', explanation: 'Iterates through a string and prints only the characters that are vowels.', code: 'void PrintVowels(string S1) {\n cout << "Vowels in string are: ";\n for (short i = 0; i < S1.length(); i++) {\n  if (IsVowel(S1[i]))\n   cout << S1[i] << "   ";\n }\n cout << endl;\n}' }, { name: 'IsVowel', signature: 'bool IsVowel(char Ch1)', explanation: 'Helper function to check if a character is a vowel.', code: 'bool IsVowel(char Ch1) {\n Ch1 = tolower(Ch1);\n return ((Ch1 == \'a\') || (Ch1 == \'e\') || (Ch1 == \'i\') || (Ch1 == \'o\') || (Ch1 == \'u\'));\n}' }], keyConcepts: ['function composition', 'printing', 'looping'] },
+  { id: 12, title: 'Problem 12 — Print Each Word', description: 'Write a function to print each word from a string on a new line.', example: 'one two three', generator: genPrintWordsSteps, functions: [{ name: 'PrintEachWordInString', signature: 'void PrintEachWordInString(string S1)', explanation: 'Uses a loop with string::find and string::substr to extract and print words separated by spaces.', code: 'void PrintEachWordInString(string S1) {\n string delim = " ";\n short pos = 0;\n string sWord;\n while ((pos = S1.find(delim)) != std::string::npos) {\n  sWord = S1.substr(0, pos);\n  if (sWord != "") {\n   cout << sWord << endl;\n  }\n  S1.erase(0, pos + delim.length());\n }\n if (S1 != "") {\n  cout << S1 << endl;\n }\n}' }], keyConcepts: ['string::find', 'string::substr', 'string::erase', 'while loop'] },
+  { id: 13, title: 'Problem 13 — Count Words', description: 'Write a function to count the number of words in a string.', example: 'this is a sentence', generator: genCountWordsSteps, functions: [{ name: 'CountWords', signature: 'short CountWords(string S1)', explanation: 'A variation of PrintEachWordInString that increments a counter instead of printing.', code: 'short CountWords(string S1) {\n string delim = " ";\n short pos = 0;\n string sWord;\n short Counter = 0;\n while ((pos = S1.find(delim)) != std::string::npos) {\n  sWord = S1.substr(0, pos);\n  if (sWord != "") {\n   Counter++;\n  }\n  S1.erase(0, pos + delim.length());\n }\n if (S1 != "") {\n  Counter++;\n }\n return Counter;\n}' }], keyConcepts: ['string::find', 'string::substr', 'counting', 'while loop'] },
+  { id: 14, title: 'Problem 14 — Split String', description: 'Write a function that splits a string by a delimiter (e.g., a space) and returns a vector of strings.', example: 'one two three', generator: genSplitStringSteps, functions: [{ name: 'SplitString', signature: 'vector<string> SplitString(string S1, string Delim)', explanation: 'Uses a loop with find/substr to extract words and adds them to a vector using push_back.', code: 'vector<string> SplitString(string S1, string Delim) {\n vector<string> vString;\n short pos = 0;\n string sWord;\n while ((pos = S1.find(Delim)) != std::string::npos) {\n  sWord = S1.substr(0, pos);\n  if (sWord != "") {\n   vString.push_back(sWord);\n  }\n  S1.erase(0, pos + Delim.length());\n }\n if (S1 != "") {\n  vString.push_back(S1);\n }\n return vString;\n}' }], keyConcepts: ['vector', 'vector::push_back', 'string::find', 'string::substr'] },
+  { id: 15, title: 'Problem 15 — Trim Left, Right, All', description: 'Write functions to trim whitespace from the left, right, and both sides of a string.', example: '   hello   ', generator: genTrimSteps, functions: [{ name: 'TrimLeft', signature: 'string TrimLeft(string S1)', explanation: 'Finds the first non-space character and returns the substring from that point.', code: 'string TrimLeft(string S1) {\n for (short i = 0; i < S1.length(); i++) {\n  if (S1[i] != \' \') {\n   return S1.substr(i, S1.length() - i);\n  }\n }\n return "";\n}' }, { name: 'TrimRight', signature: 'string TrimRight(string S1)', explanation: 'Finds the last non-space character and returns the substring up to that point.', code: 'string TrimRight(string S1) {\n for (short i = S1.length() - 1; i >= 0; i--) {\n  if (S1[i] != \' \') {\n   return S1.substr(0, i + 1);\n  }\n }\n return "";\n}' }, { name: 'Trim', signature: 'string Trim(string S1)', explanation: 'Combines TrimLeft and TrimRight for a complete trim.', code: 'string Trim(string S1) {\n return TrimLeft(TrimRight(S1));\n}' }], keyConcepts: ['string::substr', 'whitespace handling', 'looping'] },
+  { id: 16, title: 'Problem 16 — Join String', description: 'Write a function that joins a vector of strings into a single string with a delimiter.', example: '-', generator: genJoinStringSteps, functions: [{ name: 'JoinString', signature: 'string JoinString(vector<string> vString, string Delim)', explanation: 'Iterates through a vector, appending each string and a delimiter to a result string, then removes the final delimiter.', code: 'string JoinString(vector<string> vString, string Delim) {\n string S1 = "";\n for (string &s : vString) {\n  S1 = S1 + s + Delim;\n }\n return S1.substr(0, S1.length() - Delim.length());\n}' }], keyConcepts: ['vector iteration', 'range-based for loop', 'string concatenation', 'string::substr'] },
+  { id: 17, title: 'Problem 17 — Join String (Overloaded)', description: 'Overload the JoinString function to also accept a C-style array of strings.', example: '--', generator: genJoinStringOverloadSteps, functions: [{ name: 'JoinString (Vector)', signature: 'string JoinString(vector<string> vString, string Delim)', explanation: 'The vector version of the function.', code: 'string JoinString(vector<string> vString, string Delim) { /* ... see problem 16 ... */ }' }, { name: 'JoinString (Array)', signature: 'string JoinString(string arrString[], short Length, string Delim)', explanation: 'The overloaded version that takes a C-style array and its length.', code: 'string JoinString(string arrString[], short Length, string Delim) {\n string S1 = "";\n for (short i = 0; i < Length; i++) {\n  S1 = S1 + arrString[i] + Delim;\n }\n return S1.substr(0, S1.length() - Delim.length());\n}' }], keyConcepts: ['function overloading', 'C-style arrays', 'vector vs array'] },
+  { id: 18, title: 'Problem 18 — Reverse Words', description: 'Write a function that reverses the order of words in a string.', example: 'one two three', generator: genReverseWordsSteps, functions: [{ name: 'ReverseWordsInString', signature: 'string ReverseWordsInString(string S1)', explanation: 'First splits the string into a vector, then iterates through the vector backwards to build the new string.', code: 'string ReverseWordsInString(string S1) {\n vector<string> vString = SplitString(S1, " ");\n string S2 = "";\n vector<string>::iterator iter = vString.end();\n while (iter != vString.begin()) {\n  --iter;\n  S2 += *iter + " ";\n }\n S2 = S2.substr(0, S2.length() - 1);\n return S2;\n}' }, { name: 'SplitString', signature: 'vector<string> SplitString(string S1, string Delim)', explanation: 'Helper function to split the string.', code: 'vector<string> SplitString(string S1, string Delim) { /* ... see problem 14 ... */ }' }], keyConcepts: ['vector iterators', 'reverse iteration', 'function composition'] },
+  { id: 19, title: 'Problem 19 — Replace Word', description: 'Write a function to replace a word in a string with another word.', example: 'Welcome to Jordan|Jordan|USA', generator: genReplaceWordSteps, functions: [{ name: 'ReplaceWordInString', signature: 'string ReplaceWordInString(string S1, string StringToReplace, string sRepalceTo)', explanation: 'Uses a loop with string::find and string::replace to find all occurrences of a word and replace them.', code: 'string ReplaceWordInString(string S1, string StringToReplace, string sRepalceTo) {\n short pos = S1.find(StringToReplace);\n while (pos != std::string::npos) {\n  S1 = S1.replace(pos, StringToReplace.length(), sRepalceTo);\n  pos = S1.find(StringToReplace);\n }\n return S1;\n}' }], keyConcepts: ['string::find', 'string::replace', 'while loop'] },
+  { id: 20, title: 'Problem 20 — Remove Punctuations', description: 'Write a function to remove all punctuation marks from a string.', example: 'Hello, World! This is a test.', generator: genRemovePunctuationsSteps, functions: [{ name: 'RemovePunctuationsFromString', signature: 'string RemovePunctuationsFromString(string S1)', explanation: 'Iterates through the string, building a new string containing only non-punctuation characters.', code: 'string RemovePunctuationsFromString(string S1) {\n string S2 = "";\n for (short i = 0; i < S1.length(); i++) {\n  if (!ispunct(S1[i])) {\n   S2 += S1[i];\n  }\n }\n return S2;\n}' }], keyConcepts: ['ispunct()', 'string building', 'character classification'] },
+  { id: 21, title: 'Problem 21 — Struct to Line', description: 'Convert a client record (struct) to a single string line using a separator.', example: '#//#', generator: genStructToLineSteps, functions: [{ name: 'ConvertRecordToLine', signature: 'string ConvertRecordToLine(sClient Client, string Seperator)', explanation: 'Concatenates all fields of a client struct into a single string, separated by a delimiter.', code: 'struct sClient {\n string AccountNumber;\n string PinCode;\n string Name;\n string Phone;\n double AccountBalance;\n};\n\nstring ConvertRecordToLine(sClient Client, string Seperator) {\n string stClientRecord = "";\n stClientRecord += Client.AccountNumber + Seperator;\n stClientRecord += Client.PinCode + Seperator;\n stClientRecord += Client.Name + Seperator;\n stClientRecord += Client.Phone + Seperator;\n stClientRecord += to_string(Client.AccountBalance);\n return stClientRecord;\n}' }], keyConcepts: ['struct', 'string concatenation', 'data serialization', 'to_string()'] },
+  { id: 22, title: 'Problem 22 — Line to Struct', description: 'Parse a string line into a client record (struct).', example: 'A150#//#1234#//#Mohammed Abu-Hadhoud#//#079999#//#5270.00', generator: genLineToStructSteps, functions: [{ name: 'ConvertLinetoRecord', signature: 'sClient ConvertLinetoRecord(string Line, string Seperator)', explanation: 'Splits a line by a separator, then assigns each part to the corresponding field in a new client struct.', code: 'sClient ConvertLinetoRecord(string Line, string Seperator = "#//#") {\n sClient Client;\n vector<string> vClientData = SplitString(Line, Seperator);\n Client.AccountNumber = vClientData[0];\n Client.PinCode = vClientData[1];\n Client.Name = vClientData[2];\n Client.Phone = vClientData[3];\n Client.AccountBalance = stod(vClientData[4]); // string to double\n return Client;\n}' }, { name: 'SplitString', signature: 'vector<string> SplitString(string S1, string Delim)', explanation: 'Helper function to split the line.', code: 'vector<string> SplitString(string S1, string Delim) { /* ... see problem 14 ... */ }' }], keyConcepts: ['struct', 'data parsing', 'vector', 'stod()'], summaryFile: 'review_summary_p22.html' },
+  { id: 23, title: 'Problem 23 — Add Clients to File', description: 'Write a program to read new client data and save them as delimited lines in a file.', example: '', generator: genAddClientsToFileSteps, functions: [{ name: 'AddDataLineToFile', signature: 'void AddDataLineToFile(string FileName, string stDataLine)', explanation: 'Opens a file in append mode and writes a new line of data to it.', code: 'void AddDataLineToFile(string FileName, string stDataLine) {\n fstream MyFile;\n MyFile.open(FileName, ios::out | ios::app);\n if (MyFile.is_open()) {\n  MyFile << stDataLine << endl;\n  MyFile.close();\n }\n}' }, { name: 'ConvertRecordToLine', signature: 'string ConvertRecordToLine(sClient Client, string Seperator)', explanation: 'Helper function to convert client struct to a line.', code: '/* ... see problem 21 ... */' }], keyConcepts: ['file I/O', 'fstream', 'ios::app', 'data persistence'] },
+  { id: 24, title: 'Problem 24 — Load Clients from File', description: 'Load all client records from a file into a vector of structs and print them in a table.', example: '', generator: genLoadClientsFromFileSteps, functions: [{ name: 'LoadCleintsDataFromFile', signature: 'vector<sClient> LoadCleintsDataFromFile(string FileName)', explanation: 'Reads a file line by line, converts each line to a client record, and stores it in a vector.', code: 'vector<sClient> LoadCleintsDataFromFile(string FileName) {\n vector<sClient> vClients;\n fstream MyFile;\n MyFile.open(FileName, ios::in); // read mode\n if (MyFile.is_open()) {\n  string Line;\n  sClient Client;\n  while (getline(MyFile, Line)) {\n   Client = ConvertLinetoRecord(Line);\n   vClients.push_back(Client);\n  }\n  MyFile.close();\n }\n return vClients;\n}' }, { name: 'PrintAllClientsData', signature: 'void PrintAllClientsData(vector<sClient> vClients)', explanation: 'Prints a formatted table header and then iterates through the vector, printing each client\'s data.', code: 'void PrintAllClientsData(vector<sClient> vClients) { /* ... formatting code ... */ }' }], keyConcepts: ['file I/O', 'ios::in', 'getline()', 'vector', 'data loading'] },
+  { id: 25, title: 'Problem 25 — Find Client by Account Number', description: 'Search the vector of clients for a specific account number and display the client\'s details if found.', example: 'A102', generator: genFindClientByAccountNumberSteps, functions: [{ name: 'FindClientByAccountNumber', signature: 'bool FindClientByAccountNumber(string AccountNumber, vector<sClient> vClients, sClient &Client)', explanation: 'Iterates through the vector, comparing account numbers. If a match is found, it returns true and passes the client data back by reference.', code: 'bool FindClientByAccountNumber(string AccountNumber, vector<sClient> vClients, sClient &Client) {\n for (sClient C : vClients) {\n  if (C.AccountNumber == AccountNumber) {\n   Client = C;\n   return true;\n  }\n }\n return false;\n}' }], keyConcepts: ['linear search', 'vector search', 'pass-by-reference', 'boolean return'] },
+  { id: 26, title: 'Problem 26 — Delete Client', description: 'Find a client by account number, then delete their record from the file.', example: 'A101', generator: genDeleteClientByAccountNumberSteps, functions: [{ name: 'DeleteClientByAccountNumber', signature: 'bool DeleteClientByAccountNumber(string AccountNumber, vector<sClient> &vClients)', explanation: 'Finds the client, asks for confirmation, marks them for deletion, and then saves the vector (without the marked client) back to the file.', code: 'bool DeleteClientByAccountNumber(string AccountNumber, vector<sClient> &vClients) {\n /* ... find client logic ... */ \n char Answer = \'n\';\n cout << "Are you sure? y/n? ";\n cin >> Answer;\n if (Answer == \'y\' || Answer == \'Y\') {\n  /* ... mark for deletion logic ... */ \n  SaveCleintsDataToFile("Clients.txt", vClients);\n  // Refresh vector from file\n  vClients = LoadCleintsDataFromFile("Clients.txt");\n  return true;\n }\n return false;\n}' }, { name: 'SaveCleintsDataToFile', signature: 'void SaveCleintsDataToFile(string FileName, vector<sClient> vClients)', explanation: 'Saves the entire vector to the file, overwriting its contents. It skips any clients marked for deletion.', code: 'void SaveCleintsDataToFile(string FileName, vector<sClient> vClients) {\n fstream MyFile;\n MyFile.open(FileName, ios::out); // Overwrite\n string DataLine;\n if (MyFile.is_open()) {\n  for (sClient C : vClients) {\n   if (C.MarkForDelete == false) {\n    DataLine = ConvertRecordToLine(C);\n    MyFile << DataLine << endl;\n   }\n  }\n  MyFile.close();\n }\n}' }], keyConcepts: ['soft delete', 'file overwrite', 'data persistence', 'vector modification'] },
+  { id: 27, title: 'Problem 27 — Update Client', description: 'Find a client by account number, read new information, and update their record in the file.', example: 'A102', generator: genUpdateClientByAccountNumberSteps, functions: [{ name: 'UpdateClientByAccountNumber', signature: 'bool UpdateClientByAccountNumber(string AccountNumber, vector<sClient> &vClients)', explanation: 'Finds the client, displays their info, reads new data, updates the record in the vector, and saves the entire vector back to the file.', code: 'bool UpdateClientByAccountNumber(string AccountNumber, vector<sClient> &vClients) {\n sClient Client;\n char Answer = \'n\';\n if (FindClientByAccountNumber(AccountNumber, vClients, Client)) {\n  PrintClientCard(Client);\n  cout << "\\n\\nUpdate Client? y/n? ";\n  cin >> Answer;\n  if (Answer == \'y\' || Answer == \'Y\') {\n   for (sClient& C : vClients) {\n    if (C.AccountNumber == AccountNumber) {\n     // ReadNewClientData(C);\n     break;\n    }\n   }\n   SaveCleintsDataToFile("Clients.txt", vClients);\n   return true;\n  }\n }\n return false;\n}' }], keyConcepts: ['in-place update', 'file overwrite', 'vector modification', 'pass-by-reference'] },
   {
-    id: 10,
-    title: 'Problem 10 — Count Vowels in a String',
-    description: 'Read a string and count the total number of vowels (a, e, i, o, u) in it, case-insensitively.',
-    example: 'Programming Is Fun',
-    generator: genCountVowelsSteps,
+    id: 28,
+    title: 'Problem 28 — Filter Words by Length',
+    description: 'Given a sentence and a length, print only the words that are shorter than or equal to that length.',
+    example: 'this is a long sentence|4',
+    generator: genFilterWordsByLengthSteps,
     functions: [
       {
-        name: 'ReadString()',
-        signature: 'string ReadString()',
-        explanation: 'Reads a full line of text from the user.',
-        code: `string ReadString()\n{\n    string S1;\n    cout << "\\nPlease Enter Your String?\\n";\n    getline(cin, S1);\n    return S1;\n}`
+        name: 'FilterWordsByLength',
+        signature: 'void FilterWordsByLength(string sentence, int maxLength)',
+        explanation: 'Splits the sentence into words, then iterates through them, printing only the words whose length is less than or equal to maxLength.',
+        code: `void FilterWordsByLength(string sentence, int maxLength) {\n  vector<string> words = SplitString(sentence, " ");\n\n  cout << "Filtered words: ";\n  for (const string& word : words) {\n    if (word.length() <= maxLength) {\n      cout << word << " ";\n    }\n  }\n  cout << endl;\n}`
       },
       {
-        name: 'IsVowel(char Ch1)',
-        signature: 'bool IsVowel(char Ch1)',
-        explanation: 'Converts the character to lowercase and checks if it is one of \'a\', \'e\', \'i\', \'o\', or \'u\'.',
-        code: `bool IsVowel(char Ch1)\n{\n    Ch1 = tolower(Ch1);\n    return ((Ch1 == 'a') || (Ch1 == 'e') || (Ch1 == 'i') || (Ch1 == 'o') || (Ch1 == 'u'));\n}`
-      },
-      {
-        name: 'CountVowels(string S1)',
-        signature: 'short CountVowels(string S1)',
-        explanation: 'Iterates through the string and uses the IsVowel helper function to count all vowels.',
-        code: `short CountVowels(string S1)\n{\n    short Counter = 0;\n    for (short i = 0; i < S1.length(); i++)\n    {\n        if (IsVowel(S1[i]))\n            Counter++;\n    }\n    return Counter;\n}`
-      }
-    ],
-    keyConcepts: ['String Iteration', 'Helper Functions', 'Boolean Logic', 'Case Insensitivity', 'tolower()'],
-    hints: [
-      'This problem combines looping with the logic from the previous problem.',
-      'It is highly recommended to use the `IsVowel` function you just designed.',
-      'Loop through every character of the string. Inside the loop, call `IsVowel` on the current character.',
-      'If `IsVowel` returns true, increment a counter.'
-    ]
-  },
-  {
-    id: 11,
-    title: 'Problem 11 — Print All Vowels in a String',
-    description: 'Read a string and print all the vowels (a, e, i, o, u) that appear in it, case-insensitively.',
-    example: 'Programming is Fun',
-    generator: genPrintVowelsSteps,
-    functions: [
-      {
-        name: 'ReadString()',
-        signature: 'string ReadString()',
-        explanation: 'Reads a full line of text from the user.',
-        code: `string ReadString()\n{\n    string S1;\n    cout << "\\nPlease Enter Your String?\\n";\n    getline(cin, S1);\n    return S1;\n}`
-      },
-      {
-        name: 'IsVowel(char Ch1)',
-        signature: 'bool IsVowel(char Ch1)',
-        explanation: 'Converts the character to lowercase and checks if it is one of \'a\', \'e\', \'i\', \'o\', or \'u\'.',
-        code: `bool IsVowel(char Ch1)\n{\n    Ch1 = tolower(Ch1);\n    return ((Ch1 == 'a') || (Ch1 == 'e') || (Ch1 == 'i') || (Ch1 == 'o') || (Ch1 == 'u'));\n}`
-      },
-      {
-        name: 'PrintVowels(string S1)',
-        signature: 'void PrintVowels(string S1)',
-        explanation: 'Iterates through the string and uses the IsVowel helper function to print each vowel found.',
-        code: `void PrintVowels(string S1)\n{\n    cout << "\\nVowels in string are: ";\n    for (short i = 0; i < S1.length(); i++)\n    {\n        if (IsVowel(S1[i]))\n            cout << S1[i] << "   ";\n    }\n}`
-      }
-    ],
-    keyConcepts: ['String Iteration', 'Helper Functions', 'Conditional Logic', 'Character Output', 'void Functions'],
-    hints: [
-      'The structure is almost identical to counting vowels.',
-      'Loop through the string and use the `IsVowel` helper function.',
-      'Instead of incrementing a counter when `IsVowel` is true, simply print the character using `cout`.'
-    ]
-  },
-  {
-    id: 12,
-    title: 'Problem 12 — Print Each Word in a String',
-    description: 'Read a string and print each word on a new line.',
-    example: 'programming is fun',
-    generator: genPrintWordsSteps,
-    functions: [
-      {
-        name: 'ReadString()',
-        signature: 'string ReadString()',
-        explanation: 'Reads a full line of text from the user.',
-        code: `string ReadString()\n{\n    string S1;\n    cout << "Please Enter Your String?\\n";\n    getline(cin, S1);\n    return S1;\n}`
-      },
-      {
-        name: 'PrintEachWordInString(string S1)',
-        signature: 'void PrintEachWordInString(string S1)',
-        explanation: 'Uses a while loop with find, substr, and erase to extract and print each word.',
-        code: `void PrintEachWordInString(string S1)\n{\n    string delim = " ";\n    cout << "\\nYour string words are: \\n\\n";\n    short pos = 0;\n    string sWord;\n    while ((pos = S1.find(delim)) != std::string::npos)\n    {\n        sWord = S1.substr(0, pos);\n        if (sWord != "")\n        {\n            cout << sWord << endl;\n        }\n        S1.erase(0, pos + delim.length());\n    }\n    if (S1 != "")\n    {\n        cout << S1 << endl;\n    }\n}`
-      }
-    ],
-    keyConcepts: ['String Manipulation', 'find()', 'substr()', 'erase()', 'While Loop'],
-    hints: [
-      'Think about how to identify a "word". A word is a sequence of characters separated by a delimiter (like a space).',
-      'The `string::find` method is perfect for locating the position of the next space.',
-      'Once you have the position, `string::substr` can extract the word.',
-      'After extracting the word, you must shorten the original string using `string::erase` so you can find the *next* word in the next loop iteration.',
-      'Don\'t forget to print the very last word after the loop finishes!'
-    ]
-  },
-  {
-    id: 13,
-    title: 'Problem 13 — Count Each Word in a String',
-    description: 'Write a program to read a string then count each word in that string.',
-    example: 'Mohammed Abu-Hadhoud @ProgrammingAdvices',
-    generator: genCountWordsSteps,
-    functions: [
-      {
-        name: 'ReadString()',
-        signature: 'string ReadString()',
-        explanation: 'Reads a full line of text from the user.',
-        code: `string ReadString()\n{\n    string S1;\n    cout << "Please Enter Your String?\\n";\n    getline(cin, S1);\n    return S1;\n}`
-      },
-      {
-        name: 'CountWords(string S1)',
-        signature: 'short CountWords(string S1)',
-        explanation: 'Uses a while loop with find, substr, and erase to extract and count each word.',
-        code: `short CountWords(string S1)\n{\n    string delim = " ";\n    short Counter = 0;\n    short pos = 0;\n    string sWord;\n    while ((pos = S1.find(delim)) != std::string::npos)\n    {\n        sWord = S1.substr(0, pos);\n        if (sWord != "")\n        {\n            Counter++;\n        }\n        S1.erase(0, pos + delim.length());\n    }\n    if (S1 != "")\n    {\n        Counter++;\n    }\n    return Counter;\n}`
-      }
-    ],
-    keyConcepts: ['String Manipulation', 'find()', 'substr()', 'erase()', 'While Loop', 'Counters'],
-    hints: [
-      'This problem builds directly on the logic from the previous one (printing words).',
-      'Use the same `find`, `substr`, `erase` loop structure.',
-      'Instead of printing the extracted word, simply increment a counter.',
-      'Remember to handle consecutive spaces by checking if the extracted `sWord` is not empty before counting.',
-      'The last word in the string won\'t be followed by a delimiter, so you need to count it after the loop finishes.'
-    ]
-  },
-  {
-    id: 14,
-    title: 'Problem 14 — Split String into a Vector',
-    description: 'Read a string, split it into words by a delimiter, and store those words in a vector.',
-    example: 'C++ is a powerful language',
-    generator: genSplitStringSteps,
-    functions: [
-      {
-        name: 'ReadString()',
-        signature: 'string ReadString()',
-        explanation: 'Reads a full line of text from the user.',
-        code: `string ReadString()\n{\n    string S1;\n    cout << "Please Enter Your String?\\n";\n    getline(cin, S1);\n    return S1;\n}`
-      },
-      {
-        name: 'SplitString(string S1, string Delim)',
+        name: 'SplitString',
         signature: 'vector<string> SplitString(string S1, string Delim)',
-        explanation: 'Uses a while loop with find, substr, and erase to tokenize the string and stores each word in a vector.',
-        code: `vector<string> SplitString(string S1, string Delim)\n{\n    vector<string> vString;\n    short pos = 0;\n    string sWord;\n    while ((pos = S1.find(Delim)) != std::string::npos)\n    {\n        sWord = S1.substr(0, pos);\n        if (sWord != "")\n        {\n            vString.push_back(sWord);\n        }\n        S1.erase(0, pos + Delim.length());\n    }\n    if (S1 != "")\n    {\n        vString.push_back(S1);\n    }\n    return vString;\n}`
+        explanation: 'Helper function to split the string into words.',
+        code: 'vector<string> SplitString(string S1, string Delim) { /* ... see problem 14 ... */ }'
       }
     ],
-    keyConcepts: ['std::vector', 'vector::push_back', 'String Tokenizing', 'find()', 'substr()', 'erase()'],
-    hints: [
-      'Again, the `find`, `substr`, `erase` loop is the core of the solution.',
-      'First, declare an empty `vector<string> vString;`',
-      'Inside the loop, when you extract a word, instead of printing or counting it, add it to the vector using `vString.push_back(sWord);`',
-      'The function should return the final populated vector.'
-    ]
+    keyConcepts: ['string splitting', 'vector iteration', 'length check', 'conditional logic']
   },
   {
-    id: 15,
-    title: 'Problem 15 — Trim Left, Right, and All',
-    description: 'Read a string and demonstrate trimming leading spaces, trailing spaces, and both.',
-    example: '     Mohammed Abu-Hadhoud     ',
-    generator: genTrimSteps,
-    functions: [
-        {
-            name: 'TrimLeft(string S1)',
-            signature: 'string TrimLeft(string S1)',
-            explanation: 'Iterates from the left of the string, finds the first non-space character, and returns the substring from that point to the end.',
-            code: `string TrimLeft(string S1)\n{\n    for (short i = 0; i < S1.length(); i++)\n    {\n        if (S1[i] != ' ')\n        {\n            return S1.substr(i, S1.length() - i);\n        }\n    }\n    return "";\n}`
-        },
-        {
-            name: 'TrimRight(string S1)',
-            signature: 'string TrimRight(string S1)',
-            explanation: 'Iterates from the right of the string, finds the first non-space character, and returns the substring from the beginning to that point.',
-            code: `string TrimRight(string S1)\n{\n    for (short i = S1.length() - 1; i >= 0; i--)\n    {\n        if (S1[i] != ' ')\n        {\n            return S1.substr(0, i + 1);\n        }\n    }\n    return "";\n}`
-        },
-        {
-            name: 'Trim(string S1)',
-            signature: 'string Trim(string S1)',
-            explanation: 'A composite function that first calls TrimRight and then calls TrimLeft on the result to remove both leading and trailing spaces.',
-            code: `string Trim(string S1)\n{\n    return (TrimLeft(TrimRight(S1)));\n}`
-        }
-    ],
-    keyConcepts: ['String Iteration', 'substr()', 'Function Composition', 'Whitespace Handling'],
-    hints: [
-      'For `TrimLeft`, use a `for` loop that starts at index 0. The first time `S1[i]` is not a space, you\'ve found your starting point.',
-      'For `TrimRight`, use a `for` loop that starts at `S1.length() - 1` and decrements. The first time `S1[i]` is not a space, you\'ve found your ending point.',
-      'Use `string::substr` to extract the correct part of the string once you find the non-space character.',
-      'For the full `Trim`, you can simply call the other two functions: `TrimLeft(TrimRight(S1))`'
-    ]
-  },
-  {
-    id: 16,
-    title: 'Problem 16 — Join Vector to String',
-    description: 'Join a vector of strings into a single string, separated by a delimiter.',
-    example: ' ',
-    generator: genJoinStringSteps,
-    functions: [
-        {
-            name: 'JoinString(vector<string> vString, string Delim)',
-            signature: 'string JoinString(vector<string> vString, string Delim)',
-            explanation: 'Iterates through a vector of strings, concatenating each element and a delimiter to a result string. Finally, it removes the last trailing delimiter.',
-            code: `string JoinString(vector<string> vString, string Delim)\n{\n    string S1 = "";\n    \n    for (string& s : vString)\n    {\n        S1 = S1 + s + Delim;\n    }\n    \n    return S1.substr(0, S1.length() - Delim.length());\n}`
-        }
-    ],
-    keyConcepts: ['std::vector', 'String Concatenation', 'Range-based for loop', 'substr()'],
-    hints: [
-      'Create an empty string to build the result.',
-      'Use a range-based for loop (`for (string s : vString)`) to iterate through the vector.',
-      'In each iteration, append the current string `s` and the delimiter to your result string.',
-      'This will leave an extra delimiter at the end. Use `substr` to return the string minus the last delimiter.'
-    ]
-  },
-  {
-    id: 17,
-    title: 'Problem 17 — Join String (Vector & Array)',
-    description: 'Demonstrates function overloading by joining both a vector and a C-style array of strings into a single string.',
-    example: ' ',
-    generator: genJoinStringOverloadSteps,
-    functions: [
-        {
-            name: 'JoinString (vector overload)',
-            signature: 'string JoinString(vector<string> vString, string Delim)',
-            explanation: 'Iterates through a vector of strings, concatenating each element and a delimiter to a result string. Finally, it removes the last trailing delimiter.',
-            code: `string JoinString(vector<string> vString, string Delim)\n{\n    string S1 = "";\n    \n    for (string& s : vString)\n    {\n        S1 = S1 + s + Delim;\n    }\n    \n    return S1.substr(0, S1.length() - Delim.length());\n}`
-        },
-        {
-            name: 'JoinString (array overload)',
-            signature: 'string JoinString(string arrString[], short Length, string Delim)',
-            explanation: 'Iterates through a C-style array of strings, concatenating each element and a delimiter to a result string. Finally, it removes the last trailing delimiter.',
-            code: `string JoinString(string arrString[], short Length, string Delim)\n{\n    string S1 = "";\n    \n    for (short i = 0; i < Length; i++)\n    {\n        S1 = S1 + arrString[i] + Delim;\n    }\n    \n    return S1.substr(0, S1.length() - Delim.length());\n}`
-        }
-    ],
-    keyConcepts: ['Function Overloading', 'C-style Arrays', 'std::vector', 'String Concatenation'],
-    hints: [
-      'The core logic is the same for both functions.',
-      'For the vector version, a range-based for loop is cleanest: `for (string s : vString)`',
-      'For the C-style array version, you must pass the length as a parameter and use a traditional indexed for loop: `for (short i = 0; i < Length; i++)`',
-      'Both functions will need to remove the trailing delimiter at the end.'
-    ]
-  },
-  {
-    id: 18,
-    title: 'Problem 18 — Reverse Words in a String',
-    description: 'Read a string and reverse the order of its words.',
-    example: 'Welcome to Jordan',
-    generator: genReverseWordsSteps,
-    functions: [
-      {
-        name: 'ReadString()',
-        signature: 'string ReadString()',
-        explanation: 'Reads a full line of text from the user.',
-        code: `string ReadString()\n{\n    string S1;\n    cout << "Please Enter Your String?\\n";\n    getline(cin, S1);\n    return S1;\n}`
-      },
-      {
-        name: 'SplitString(string S1, string Delim)',
-        signature: 'vector<string> SplitString(string S1, string Delim)',
-        explanation: 'Uses a while loop with find, substr, and erase to tokenize the string and stores each word in a vector. This is a prerequisite for reversing.',
-        code: `vector<string> SplitString(string S1, string Delim)\n{\n    vector<string> vString;\n    short pos = 0;\n    string sWord;\n    while ((pos = S1.find(Delim)) != std::string::npos)\n    {\n        sWord = S1.substr(0, pos);\n        if (sWord != "")\n        {\n            vString.push_back(sWord);\n        }\n        S1.erase(0, pos + Delim.length());\n    }\n    if (S1 != "")\n    {\n        vString.push_back(S1);\n    }\n    return vString;\n}`
-      },
-      {
-        name: 'ReverseWordsInString(string S1)',
-        signature: 'string ReverseWordsInString(string S1)',
-        explanation: 'Splits the string into a vector of words, then iterates through the vector backwards (using an iterator) to build the new reversed string.',
-        code: `string ReverseWordsInString(string S1)\n{\n    vector<string> vString;\n    string S2 = "";\n    vString = SplitString(S1, " ");\n    \n    vector<string>::iterator iter = vString.end();\n    \n    while (iter != vString.begin())\n    {\n        --iter;\n        S2 += *iter + " ";\n    }\n    \n    S2 = S2.substr(0, S2.length() - 1); //remove last space.\n    return S2;\n}`
-      }
-    ],
-    keyConcepts: ['std::vector', 'vector::iterator', 'Looping Backwards', 'String Tokenizing', 'Function Composition'],
-    hints: [
-      'This is a multi-step problem. First, you need to get the words into a data structure.',
-      'Use the `SplitString` function from an earlier problem to get a `vector<string>` of the words.',
-      'To iterate backwards, you can use a `vector::iterator` starting at `vString.end()` and decrementing it until it reaches `vString.begin()`.',
-      'Alternatively, a simpler way is to use a normal `for` loop that counts down: `for (int i = vString.size() - 1; i >= 0; i--)`.'
-    ]
-  },
-  {
-    id: 19,
-    title: 'Problem 19 — Replace Word in String',
-    description: 'Read a string, a word to find, and a replacement word, then replace all occurrences of the word.',
-    example: 'Welcome to Jordan , Jordan is a nice country|Jordan|USA',
-    generator: genReplaceWordSteps,
-    functions: [
-        {
-            name: 'ReplaceWordInStringUsingBuiltInFunction',
-            signature: 'string ReplaceWordInString(string S1, string StringToReplace, string sRepalceTo)',
-            explanation: 'Uses a while loop with `string::find` to locate the word to replace. If found, it uses `string::replace` to substitute the new word and then searches again for the next occurrence.',
-            code: `string ReplaceWordInStringUsingBuiltInFunction(string S1, string StringToReplace, string sRepalceTo)\n{\n    short pos = S1.find(StringToReplace);\n    \n    while (pos != std::string::npos)\n    {\n        S1 = S1.replace(pos, StringToReplace.length(), sRepalceTo);\n        pos = S1.find(StringToReplace); //find next\n    }\n    \n    return S1;\n}`
-        }
-    ],
-    keyConcepts: ['string::find', 'string::replace', 'While Loop', 'std::string::npos', 'String Manipulation'],
-    hints: [
-      'You need to find the position of the word to replace. `string::find` is perfect for this.',
-      'Since you need to replace *all* occurrences, a `while` loop is necessary. The loop should continue as long as `find` does not return `std::string::npos`.',
-      'Inside the loop, use `string::replace(position, length, new_word)` to perform the replacement.',
-      'Crucially, after replacing, you must call `find` again to search for the *next* occurrence.'
-    ]
-  },
-  {
-    id: 20,
-    title: 'Problem 20 — Remove Punctuations',
-    description: 'Read a string and remove all punctuation characters from it.',
-    example: 'Welcome, to Jordan; Jordan is a nice country.',
-    generator: genRemovePunctuationsSteps,
-    functions: [
-        {
-            name: 'RemovePunctuationsFromString',
-            signature: 'string RemovePunctuationsFromString(string S1)',
-            explanation: 'Iterates through the input string. For each character, it uses `ispunct()` to check if it is a punctuation mark. If not, the character is appended to a new result string.',
-            code: `string RemovePunctuationsFromString(string S1)\n{\n    string S2 = "";\n    \n    for (short i = 0; i < S1.length(); i++)\n    {\n        if (!ispunct(S1[i]))\n        {\n            S2 += S1[i];\n        }\n    }\n    \n    return S2;\n}`
-        }
-    ],
-    keyConcepts: ['String Iteration', 'ispunct()', 'String Concatenation', 'cctype library', 'Building Strings'],
-    hints: [
-      'Create a new, empty string that will hold the result.',
-      'Loop through the original string character by character.',
-      'The `<cctype>` library has a very useful function: `ispunct(char)`. It returns true if the character is punctuation.',
-      'Inside the loop, if `!ispunct(S1[i])` is true, append that character to your new result string.'
-    ]
-  },
-  {
-    id: 21,
-    title: 'Problem 21 — Convert Struct Record to Line',
-    description: 'Visualize the process of converting a struct of client data into a single delimited string for saving.',
-    example: '#//#',
-    generator: genStructToLineSteps,
-    functions: [
-        {
-            name: 'ConvertRecordToLine',
-            signature: 'string ConvertRecordToLine(sClient Client, string Seperator)',
-            explanation: 'Takes a client struct and concatenates its fields (AccountNumber, PinCode, Name, Phone, AccountBalance) into a single string, separated by the provided delimiter.',
-            code: `struct sClient\n{\n    string AccountNumber;\n    string PinCode;\n    string Name;\n    string Phone;\n    double AccountBalance;\n};\n\nstring ConvertRecordToLine(sClient Client, string Seperator = "#//#")\n{\n    string stClientRecord = "";\n    stClientRecord += Client.AccountNumber + Seperator;\n    stClientRecord += Client.PinCode + Seperator;\n    stClientRecord += Client.Name + Seperator;\n    stClientRecord += Client.Phone + Seperator;\n    stClientRecord += to_string(Client.AccountBalance);\n    return stClientRecord;\n}`
-        }
-    ],
-    keyConcepts: ['struct', 'Data Serialization', 'String Concatenation', 'to_string()', 'Delimiters'],
-    hints: [
-      'Start with an empty string, e.g., `stClientRecord`.',
-      'Append each field from the struct one by one, followed by the separator string.',
-      'The `AccountBalance` is a double, so it must be converted to a string using `to_string()` before it can be concatenated.',
-      'Do not add a separator after the last field.'
-    ]
-  },
-  {
-    id: 22,
-    title: 'Problem 22 — Convert Line to Struct Record',
-    description: 'Visualize the process of parsing a delimited string and populating a C++ struct with the data.',
-    example: 'A150#//#1234#//#Mohammed Abu-Hadhoud#//#079999#//#5270.00',
-    generator: genLineToStructSteps,
+    id: 29,
+    title: 'Problem 29 — Split by Custom Delimiter',
+    description: 'Split a string into a vector using a custom, multi-character delimiter like "#//#". This is a key step in parsing complex data records.',
+    example: 'A150#//#1234#//#Mohammed',
+    generator: genSplitStringCustomDelimSteps,
     functions: [
       {
         name: 'SplitString',
         signature: 'vector<string> SplitString(string S1, string Delim)',
-        explanation: 'A helper function that tokenizes a string by a delimiter and returns a vector of the tokens.',
-        code: `vector<string> SplitString(string S1, string Delim)\n{\n    vector<string> vString;\n    short pos = 0;\n    string sWord;\n    while ((pos = S1.find(Delim)) != std::string::npos)\n    {\n        sWord = S1.substr(0, pos);\n        if (sWord != "")\n        {\n            vString.push_back(sWord);\n        }\n        S1.erase(0, pos + Delim.length());\n    }\n    if (S1 != "")\n    {\n        vString.push_back(S1);\n    }\n    return vString;\n}`
-      },
-      {
-        name: 'ConvertLinetoRecord',
-        signature: 'sClient ConvertLinetoRecord(string Line, string Seperator)',
-        explanation: 'Uses SplitString to get a vector of data, then assigns each vector element to the corresponding field in an sClient struct. It uses `stod` to convert the balance.',
-        code: `struct sClient\n{\n    string AccountNumber;\n    string PinCode;\n    string Name;\n    string Phone;\n    double AccountBalance;\n};\n\nsClient ConvertLinetoRecord(string Line, string Seperator = "#//#")\n{\n    sClient Client;\n    vector<string> vClientData;\n    vClientData = SplitString(Line, Seperator);\n    \n    Client.AccountNumber = vClientData[0];\n    Client.PinCode = vClientData[1];\n    Client.Name = vClientData[2];\n    Client.Phone = vClientData[3];\n    Client.AccountBalance = stod(vClientData[4]);\n    \n    return Client;\n}`
-      },
-      {
-        name: 'PrintClientRecord',
-        signature: 'void PrintClientRecord(sClient Client)',
-        explanation: 'A utility function to print the contents of an sClient struct in a readable format.',
-        code: `void PrintClientRecord(sClient Client)\n{\n    cout << "\\n\\nThe following is the extracted client record:\\n";\n    cout << "\\nAccout Number: " << Client.AccountNumber;\n    cout << "\\nPin Code      : " << Client.PinCode;\n    cout << "\\nName          : " << Client.Name;\n    cout << "\\nPhone         : " << Client.Phone;\n    cout << "\\nAccount Balance: " << Client.AccountBalance;\n}`
+        explanation: 'This function repeatedly finds the delimiter, extracts the substring before it (the token), adds the token to a vector, and then erases that token and the delimiter from the original string. The loop continues until no more delimiters are found.',
+        code: 'vector<string> SplitString(string S1, string Delim) {\n vector<string> vString;\n short pos = 0;\n string sWord;\n while ((pos = S1.find(Delim)) != std::string::npos) {\n  sWord = S1.substr(0, pos);\n  if (sWord != "") {\n   vString.push_back(sWord);\n  }\n  S1.erase(0, pos + Delim.length());\n }\n if (S1 != "") {\n  vString.push_back(S1);\n }\n return vString;\n}'
       }
     ],
-    keyConcepts: ['Data Deserialization', 'String Parsing', 'std::vector', 'stod()', 'struct'],
+    keyConcepts: ['custom delimiter', 'string::find', 'string::substr', 'string::erase', 'vector', 'data parsing'],
     hints: [
-      'This is the reverse of the previous problem. First, you need to break the line into pieces.',
-      'Use the `SplitString` function (from P14) to get a `vector<string>` of the client data fields.',
-      'Create a new, empty `sClient` struct.',
-      'Assign each element from the vector to its corresponding field in the struct (e.g., `Client.AccountNumber = vClientData[0];`).',
-      'The account balance is a string in the vector. Use `stod()` (string to double) to convert it before assigning it to the struct field.'
+      'The core logic is a `while` loop that continues as long as `S1.find(Delim)` does not return `std::string::npos`.',
+      'Inside the loop, `S1.substr(0, pos)` will give you the token you need.',
+      'Don\'t forget to erase not just the token, but the delimiter as well. The length to erase is `pos + Delim.length()`.',
+      'After the loop finishes, there might be one last token in the string. Handle this case!'
     ]
   },
-  {
-    id: 23,
-    title: 'Problem 23 — Add Multiple Clients to a File',
-    description: 'Simulate reading multiple client records from a user and saving each one as a single line in a file.',
-    example: 'This problem is a simulation and does not take input.',
-    generator: genAddClientsToFileSteps,
-    functions: [
-      {
-        name: 'ReadNewClient',
-        signature: 'sClient ReadNewClient()',
-        explanation: 'Prompts the user to enter all fields for a new client and returns a populated sClient struct. Uses `cin >> ws` to handle whitespace before reading the account number.',
-        code: `struct sClient\n{\n    string AccountNumber;\n    string PinCode;\n    string Name;\n    string Phone;\n    double AccountBalance;\n};\n\nsClient ReadNewClient()\n{\n    sClient Client;\n    cout << "Enter Account Number? ";\n    getline(cin >> ws, Client.AccountNumber);\n    cout << "Enter PinCode? ";\n    getline(cin, Client.PinCode);\n    cout << "Enter Name? ";\n    getline(cin, Client.Name);\n    cout << "Enter Phone? ";\n    getline(cin, Client.Phone);\n    cout << "Enter AccountBalance? ";\n    cin >> Client.AccountBalance;\n    return Client;\n}`
-      },
-      {
-        name: 'ConvertRecordToLine',
-        signature: 'string ConvertRecordToLine(sClient Client, string Seperator)',
-        explanation: 'Takes a client struct and concatenates its fields into a single string, separated by the provided delimiter.',
-        code: `string ConvertRecordToLine(sClient Client, string Seperator = "#//#")\n{\n    string stClientRecord = "";\n    stClientRecord += Client.AccountNumber + Seperator;\n    stClientRecord += Client.PinCode + Seperator;\n    stClientRecord += Client.Name + Seperator;\n    stClientRecord += Client.Phone + Seperator;\n    stClientRecord += to_string(Client.AccountBalance);\n    return stClientRecord;\n}`
-      },
-      {
-        name: 'AddDataLineToFile',
-        signature: 'void AddDataLineToFile(string FileName, string stDataLine)',
-        explanation: 'Opens a file in append mode (`ios::out | ios::app`) and writes a given line of data to it, followed by a newline.',
-        code: `void AddDataLineToFile(string FileName, string stDataLine)\n{\n    fstream MyFile;\n    MyFile.open(FileName, ios::out | ios::app);\n    if (MyFile.is_open())\n    {\n        MyFile << stDataLine << endl;\n        MyFile.close();\n    }\n}`
-      },
-       {
-        name: 'AddClients',
-        signature: 'void AddClients()',
-        explanation: 'Uses a do-while loop to repeatedly ask the user to add new clients until they choose to stop. It calls other functions to handle the details of reading and saving.',
-        code: `void AddClients()\n{\n    char AddMore = 'Y';\n    do\n    {\n        cout << "Adding New Client:\\n\\n";\n        AddNewClient();\n        cout << "\\nClient Added Successfully, do you want to add more clients? Y/N? ";\n        cin >> AddMore;\n    } while (toupper(AddMore) == 'Y');\n}`
-      }
-    ],
-    keyConcepts: ['File I/O', 'fstream', 'ios::app', 'do-while loop', 'Function Composition', 'User Input Simulation'],
-    hints: [
-      'The logic should revolve around a `do-while` loop that continues as long as the user enters \'Y\'.',
-      'Inside the loop: 1. Read a new client record into a struct. 2. Convert that struct into a delimited line. 3. Append that line to the file.',
-      'To add to a file without erasing its contents, open the `fstream` with the `ios::app` (append) flag.',
-      'Always remember to close your file stream when you are done with it.'
-    ]
-  },
-  {
-    id: 24,
-    title: 'Problem 24 — Load Clients from File to Vector',
-    description: 'Visualize reading a file line by line, parsing each line into a struct, storing these structs in a vector, and finally printing a formatted list.',
-    example: 'This problem is a simulation and does not take input.',
-    generator: genLoadClientsFromFileSteps,
-    functions: [
-       {
-        name: 'SplitString',
-        signature: 'vector<string> SplitString(string S1, string Delim)',
-        explanation: 'A helper function that tokenizes a string by a delimiter and returns a vector of the tokens.',
-        code: `vector<string> SplitString(string S1, string Delim)\n{\n    vector<string> vString;\n    short pos = 0;\n    string sWord;\n    while ((pos = S1.find(Delim)) != std::string::npos)\n    {\n        sWord = S1.substr(0, pos);\n        if (sWord != "")\n        {\n            vString.push_back(sWord);\n        }\n        S1.erase(0, pos + Delim.length());\n    }\n    if (S1 != "")\n    {\n        vString.push_back(S1);\n    }\n    return vString;\n}`
-      },
-      {
-        name: 'ConvertLinetoRecord',
-        signature: 'sClient ConvertLinetoRecord(string Line, string Seperator)',
-        explanation: 'Uses SplitString to get a vector of data, then assigns each vector element to the corresponding field in an sClient struct. It uses `stod` to convert the balance.',
-        code: `struct sClient\n{\n    string AccountNumber;\n    string PinCode;\n    string Name;\n    string Phone;\n    double AccountBalance;\n};\n\nsClient ConvertLinetoRecord(string Line, string Seperator = "#//#")\n{\n    sClient Client;\n    vector<string> vClientData;\n    vClientData = SplitString(Line, Seperator);\n    \n    Client.AccountNumber = vClientData[0];\n    Client.PinCode = vClientData[1];\n    Client.Name = vClientData[2];\n    Client.Phone = vClientData[3];\n    Client.AccountBalance = stod(vClientData[4]);\n    \n    return Client;\n}`
-      },
-       {
-        name: 'LoadCleintsDataFromFile',
-        signature: 'vector<sClient> LoadCleintsDataFromFile(string FileName)',
-        explanation: 'Opens a file, reads it line by line using `getline`, parses each line into a struct, and adds the struct to a vector which is then returned.',
-        code: `vector<sClient> LoadCleintsDataFromFile(string FileName)\n{\n    vector<sClient> vClients;\n    fstream MyFile;\n    MyFile.open(FileName, ios::in);\n    \n    if (MyFile.is_open())\n    {\n        string Line;\n        sClient Client;\n        \n        while (getline(MyFile, Line))\n        {\n            Client = ConvertLinetoRecord(Line);\n            vClients.push_back(Client);\n        }\n        MyFile.close();\n    }\n    return vClients;\n}`
-      },
-      {
-        name: 'PrintAllClientsData',
-        signature: 'void PrintAllClientsData(vector<sClient> vClients)',
-        explanation: 'Prints a formatted header, then iterates through a vector of clients, printing each one as a formatted row. It uses `setw` from `<iomanip>` for alignment.',
-        code: `void PrintClientRecord(sClient Client)\n{\n    cout << "| " << setw(15) << left << Client.AccountNumber;\n    cout << "| " << setw(10) << left << Client.PinCode;\n    cout << "| " << setw(40) << left << Client.Name;\n    cout << "| " << setw(12) << left << Client.Phone;\n    cout << "| " << setw(12) << left << Client.AccountBalance;\n}\n\nvoid PrintAllClientsData(vector<sClient> vClients)\n{\n    cout << "\\n\\t\\t\\t\\t\\tClient List (" << vClients.size() << ") Client(s).";\n    cout << "\\n\\n_______________________________________________________";\n    cout << "_________________________________________\\n" << endl;\n    \n    cout << "| " << left << setw(15) << "Accout Number";\n    cout << "| " << left << setw(10) << "Pin Code";\n    cout << "| " << left << setw(40) << "Client Name";\n    cout << "| " << left << setw(12) << "Phone";\n    cout << "| " << left << setw(12) << "Balance";\n    cout << "\\n_______________________________________________________";\n    cout << "_________________________________________\\n" << endl;\n    \n    for (sClient Client : vClients)\n    {\n        PrintClientRecord(Client);\n        cout << endl;\n    }\n    \n    cout << "\\n_______________________________________________________";\n    cout << "_________________________________________\\n" << endl;\n}`
-      },
-    ],
-    keyConcepts: ['File Reading', 'fstream', 'getline()', 'std::vector<struct>', 'Formatted Output', 'setw()', 'iomanip'],
-    hints: [
-      'To read a file line by line, the `while (getline(MyFile, Line))` loop is the standard approach.',
-      'Inside the loop, you will process one `Line` at a time.',
-      'For each line, use the `ConvertLinetoRecord` function from P22 to parse it into a `sClient` struct.',
-      'Add the newly created struct to your vector using `vClients.push_back(Client);`.'
-    ]
-  },
-  {
-    id: 25,
-    title: 'Problem 25 — Find Client by Account Number',
-    description: 'Visualize finding a client record by searching for their account number in a vector loaded from a file.',
-    example: 'A102',
-    generator: genFindClientByAccountNumberSteps,
-    functions: [
-       {
-        name: 'SplitString, ConvertLinetoRecord, LoadCleintsDataFromFile',
-        signature: '// Helper functions from previous problems',
-        explanation: 'These functions are used to load the client data from "Clients.txt" into a vector of structs, which is a prerequisite for searching.',
-        code: `// Functions SplitString, ConvertLinetoRecord, and LoadCleintsDataFromFile are assumed to be defined as in Problem 24.`
-      },
-      {
-        name: 'PrintClientCard',
-        signature: 'void PrintClientCard(sClient Client)',
-        explanation: 'A utility function to print the details of a single client in a card-like format.',
-        code: `void PrintClientCard(sClient Client)\n{\n    cout << "\\nThe following are the client details:\\n";\n    cout << "\\nAccout Number: " << Client.AccountNumber;\n    cout << "\\nPin Code      : " << Client.PinCode;\n    cout << "\\nName          : " << Client.Name;\n    cout << "\\nPhone         : " << Client.Phone;\n    cout << "\\nAccount Balance: " << Client.AccountBalance;\n}`
-      },
-      {
-        name: 'FindClientByAccountNumber',
-        signature: 'bool FindClientByAccountNumber(string AccountNumber, sClient& Client)',
-        explanation: 'Loads all clients into a vector. It then iterates through the vector, comparing account numbers. If a match is found, it updates the `Client` struct (passed by reference) and returns `true`. Otherwise, it returns `false`.',
-        code: `struct sClient\n{\n    string AccountNumber;\n    string PinCode;\n    string Name;\n    string Phone;\n    double AccountBalance;\n};\n\nbool FindClientByAccountNumber(string AccountNumber, sClient& Client)\n{\n    vector<sClient> vClients = LoadCleintsDataFromFile("Clients.txt");\n    \n    for (sClient C : vClients)\n    {\n        if (C.AccountNumber == AccountNumber)\n        {\n            Client = C;\n            return true;\n        }\n    }\n    return false;\n}`
-      },
-      {
-        name: 'ReadClientAccountNumber',
-        signature: 'string ReadClientAccountNumber()',
-        explanation: 'A simple utility function to prompt the user and read the account number they want to find.',
-        code: `string ReadClientAccountNumber()\n{\n    string AccountNumber = "";\n    cout << "\\nPlease enter AccountNumber? ";\n    cin >> AccountNumber;\n    return AccountNumber;\n}`
-      }
-    ],
-    keyConcepts: ['Linear Search', 'Pass by Reference', 'Vector Iteration', 'Boolean Return Value', 'Conditional Logic'],
-    hints: [
-      'First, load all clients from the file into a vector using the function from P24.',
-      'Iterate through the vector of clients using a range-based for loop.',
-      'Inside the loop, compare the `AccountNumber` of the current client (`C.AccountNumber`) with the account number you are searching for.',
-      'If you find a match, you should return `true` immediately. If the loop finishes without a match, return `false`.'
-    ]
-  },
-  {
-    id: 26,
-    title: 'Problem 26 — Delete Client by Account Number',
-    description: 'Visualize finding a client, marking them for deletion, and then rewriting the file without that client.',
-    example: 'A102',
-    generator: genDeleteClientByAccountNumberSteps,
-    functions: [
-      {
-        name: 'Helper Functions',
-        signature: '// Load, Convert, Split',
-        explanation: 'This problem relies on several helper functions from previous problems to load and convert client data from the text file.',
-        code: `// Functions SplitString, ConvertLinetoRecord, and LoadCleintsDataFromFile are assumed to be defined as in Problem 24.`
-      },
-       {
-        name: 'FindClientByAccountNumber',
-        signature: 'bool FindClientByAccountNumber(string AccountNumber, vector<sClient> vClients, sClient& Client)',
-        explanation: 'Iterates through the provided vector to find a client. Note: This version doesn\'t reload from file, it searches the in-memory vector.',
-        code: `bool FindClientByAccountNumber(string AccountNumber, vector<sClient> vClients, sClient& Client)\n{\n    for (sClient C : vClients)\n    {\n        if (C.AccountNumber == AccountNumber)\n        {\n            Client = C;\n            return true;\n        }\n    }\n    return false;\n}`
-      },
-      {
-        name: 'MarkClientForDeleteByAccountNumber',
-        signature: 'bool MarkClientForDeleteByAccountNumber(string AccountNumber, vector<sClient>& vClients)',
-        explanation: 'Finds a client by account number and sets their `MarkForDelete` flag to true. The vector is passed by reference (&) so the change persists.',
-        code: `struct sClient\n{\n    string AccountNumber;\n    string PinCode;\n    string Name;\n    string Phone;\n    double AccountBalance;\n    bool MarkForDelete = false;\n};\n\nbool MarkClientForDeleteByAccountNumber(string AccountNumber, vector<sClient>& vClients)\n{\n    for (sClient& C : vClients)\n    {\n        if (C.AccountNumber == AccountNumber)\n        {\n            C.MarkForDelete = true;\n            return true;\n        }\n    }\n    return false;\n}`
-      },
-      {
-        name: 'SaveCleintsDataToFile',
-        signature: 'vector<sClient> SaveCleintsDataToFile(string FileName, vector<sClient> vClients)',
-        explanation: 'Opens a file in write mode (`ios::out`), which overwrites it. It then iterates through the vector and writes only the records where `MarkForDelete` is false.',
-        code: `vector<sClient> SaveCleintsDataToFile(string FileName, vector<sClient> vClients)\n{\n    fstream MyFile;\n    MyFile.open(FileName, ios::out); //overwrite\n    string DataLine;\n    if (MyFile.is_open())\n    {\n        for (sClient C : vClients)\n        {\n            if (C.MarkForDelete == false)\n            {\n                DataLine = ConvertRecordToLine(C);\n                MyFile << DataLine << endl;\n            }\n        }\n        MyFile.close();\n    }\n    return vClients;\n}`
-      },
-      {
-        name: 'DeleteClientByAccountNumber',
-        signature: 'bool DeleteClientByAccountNumber(string AccountNumber, vector<sClient>& vClients)',
-        explanation: 'The main orchestrator function. It finds the client, asks for confirmation, marks for deletion, saves the updated list to the file, and then reloads the vector to reflect the changes.',
-        code: `bool DeleteClientByAccountNumber(string AccountNumber, vector<sClient>& vClients)\n{\n    sClient Client;\n    char Answer = 'n';\n    if (FindClientByAccountNumber(AccountNumber, vClients, Client))\n    {\n        PrintClientCard(Client);\n        cout << "\\n\\nAre you sure you want delete this client? y/n ? ";\n        cin >> Answer;\n        if (Answer == 'y' || Answer == 'Y')\n        {\n            MarkClientForDeleteByAccountNumber(AccountNumber, vClients);\n            SaveCleintsDataToFile(ClientsFileName, vClients);\n            //Refresh Clients\n            vClients = LoadCleintsDataFromFile(ClientsFileName);\n            cout << "\\n\\nClient Deleted Successfully.";\n            return true;\n        }\n    }\n    else\n    {\n        cout << "\\nClient with Account Number (" << AccountNumber << ") is Not Found!";\n        return false;\n    }\n}`
-      }
-    ],
-    keyConcepts: ['Soft Delete', 'File Overwriting (ios::out)', 'Vector Pass-by-Reference', 'Data Persistence', 'State Management'],
-    hints: [
-      'A safe way to delete is to first load all data into a vector.',
-      'Then, find the client to delete in the vector and mark it (e.g., with a boolean `MarkForDelete = true`). This is called a "soft delete".',
-      'Next, open the original file in *write* mode (`ios::out`), which erases its contents.',
-      'Finally, loop through your vector and write back only the clients that are *not* marked for deletion.'
-    ]
-  },
-  {
-    id: 27,
-    title: 'Problem 27 — Update Client by Account Number',
-    description: 'Visualize finding a client, reading new data, updating the record in memory, and overwriting the file.',
-    example: 'A123',
-    generator: genUpdateClientByAccountNumberSteps,
-    functions: [
-        {
-            name: 'Helper Functions',
-            signature: '// Load, Convert, Find, etc.',
-            explanation: 'This problem relies on several helper functions from previous problems to load, convert, find, and save client data.',
-            code: `// Functions SplitString, ConvertLinetoRecord, LoadCleintsDataFromFile, FindClientByAccountNumber, and SaveCleintsDataToFile are assumed to be defined.`
-        },
-        {
-            name: 'ChangeClientRecord',
-            signature: 'sClient ChangeClientRecord(string AccountNumber)',
-            explanation: 'Prompts the user to enter new details for a client, keeping the original AccountNumber. Returns a new, populated sClient struct.',
-            code: `sClient ChangeClientRecord(string AccountNumber)\n{\n    sClient Client;\n    Client.AccountNumber = AccountNumber;\n    cout << "\\n\\nEnter PinCode? ";\n    getline(cin >> ws, Client.PinCode);\n    cout << "Enter Name? ";\n    getline(cin, Client.Name);\n    cout << "Enter Phone? ";\n    getline(cin, Client.Phone);\n    cout << "Enter AccountBalance? ";\n    cin >> Client.AccountBalance;\n    return Client;\n}`
-        },
-        {
-            name: 'UpdateClientByAccountNumber',
-            signature: 'bool UpdateClientByAccountNumber(string AccountNumber, vector<sClient>& vClients)',
-            explanation: 'Finds a client, asks for confirmation, reads new data, updates the client in the vector (by reference), and saves the changes back to the file.',
-            code: `struct sClient\n{\n    string AccountNumber;\n    string PinCode;\n    string Name;\n    string Phone;\n    double AccountBalance;\n    bool MarkForDelete = false;\n};\n\nbool UpdateClientByAccountNumber(string AccountNumber, vector<sClient>& vClients)\n{\n    sClient Client;\n    char Answer = 'n';\n    if (FindClientByAccountNumber(AccountNumber, vClients, Client))\n    {\n        PrintClientCard(Client);\n        cout << "\\n\\nAre you sure you want update this client? y/n ? ";\n        cin >> Answer;\n        if (Answer == 'y' || Answer == 'Y')\n        {\n            for (sClient& C : vClients)\n            {\n                if (C.AccountNumber == AccountNumber)\n                {\n                    C = ChangeClientRecord(AccountNumber);\n                    break;\n                }\n            }\n            SaveCleintsDataToFile(ClientsFileName, vClients);\n            cout << "\\n\\nClient Updated Successfully.";\n            return true;\n        }\n    }\n    else\n    {\n        cout << "\\nClient with Account Number (" << AccountNumber << ") is Not Found!";\n        return false;\n    }\n}`
-        }
-    ],
-    keyConcepts: ['Data Update', 'In-place Modification', 'File Overwriting', 'Vector Pass-by-Reference', 'CRUD Operations'],
-    hints: [
-      'The process is very similar to deleting: load data into a vector first.',
-      'Find the client you want to update within the vector.',
-      'Once found, prompt the user for the new information and update the fields of that specific client struct *in the vector*.',
-      'Finally, save the entire modified vector back to the file, overwriting the old contents.'
-    ]
-  }
 ];
