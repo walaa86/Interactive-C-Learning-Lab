@@ -1593,6 +1593,8 @@ function genLineToStructSteps(line: string): Step[] {
     const separator = "#//#";
     let vString: string[] = [];
     let stepCounter = 0;
+    const emptyClient = { AccountNumber: "", PinCode: "", Name: "", Phone: "", AccountBalance: null };
+    const defaultSearch = { target: '', currentIndex: -1, found: false, resultClient: emptyClient };
 
     // --- Phase 1: Split String into Vector ---
     steps.push({
@@ -1603,6 +1605,7 @@ function genLineToStructSteps(line: string): Step[] {
         input: line,
         mem: [],
         vectorContents: [...vString],
+        search: defaultSearch,
     });
 
     const parts = line.split(separator);
@@ -1616,6 +1619,7 @@ function genLineToStructSteps(line: string): Step[] {
             input: line,
             mem: [],
             vectorContents: [...vString],
+            search: defaultSearch,
         });
     }
 
@@ -1627,6 +1631,7 @@ function genLineToStructSteps(line: string): Step[] {
         input: line,
         mem: [],
         vectorContents: [...vString],
+        search: defaultSearch,
     });
     
     // --- Phase 2: Assign Vector elements to Struct fields ---

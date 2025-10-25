@@ -35,12 +35,14 @@
         p {
             margin-bottom: 1em;
         }
-        code {
+        code, .ltr {
             font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
             background-color: #e9ecef;
             padding: 2px 6px;
             border-radius: 4px;
             font-size: 0.9em;
+            direction: ltr;
+            display: inline-block;
         }
         pre {
             background-color: #282c34; /* Dark background for code blocks */
@@ -49,6 +51,7 @@
             border-radius: 8px;
             overflow-x: auto;
             white-space: pre-wrap;
+            direction: ltr;
         }
         pre code {
             background-color: transparent;
@@ -56,6 +59,7 @@
         }
         strong {
             color: #d9534f; /* A reddish color for emphasis */
+            font-weight: 600;
         }
         .summary {
             background-color: #fff3cd; /* Light yellow for summary box */
@@ -64,20 +68,24 @@
             margin-top: 20px;
             border-radius: 4px;
         }
+        .arrow {
+            font-size: 1.5em;
+            color: #007bff;
+            margin: 0 10px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>ملخص المراجعة: رحلة البيانات من سطر نصي إلى سجل منظم</h1>
-        <p>اليوم، قمنا بربط كل المهارات التي تعلمناها سابقاً لنحل مشكلة أساسية في البرمجة: كيف نأخذ بيانات خام (سطر نصي) ونحولها إلى شيء منظم ومفهوم للكمبيوتر (<code>struct</code>).</p>
+        <p>اليوم، قمنا بربط كل المهارات التي تعلمناها سابقاً لنحل مشكلة أساسية في البرمجة: كيف نأخذ بيانات خام (سطر نصي) ونحولها إلى شيء منظم ومفهوم للكمبيوتر. في C++، هذا الهيكل المنظم يسمى <strong><code>struct</code></strong>.</p>
 
         <h2>أولاً: الأدوات التي كانت في جعبتنا</h2>
         <p>قبل أن نبدأ، كان لدينا بالفعل أداتان قويتان قمنا ببنائهما سابقاً:</p>
 
-        <h4>1. الأداة الأولى: <code>struct sClient</code> (قالب البيانات)</h4>
-        <p><strong>ما هو؟</strong> هو ببساطة قالب أو "بطاقة تعريف" فارغة قمنا بتصميمها لتمثل أي عميل بنك.</p>
-        <p><strong>لماذا؟</strong> بدلاً من التعامل مع متغيرات متناثرة، يجمع لنا كل معلومات العميل في مكان واحد منظم.</p>
-        <pre><code>// هذا هو القالب الذي سنصب فيه البيانات
+        <h4>1. الأداة الأولى: قالب البيانات (<code>struct sClient</code>)</h4>
+        <p><strong>ما هو؟</strong> هو ببساطة قالب أو "بطاقة تعريف" فارغة قمنا بتصميمها لتمثل أي عميل بنك. بدلاً من التعامل مع متغيرات متناثرة، يجمع لنا كل معلومات العميل في مكان واحد منظم.</p>
+        <pre><code class="language-cpp">// هذا هو القالب الذي سنصب فيه البيانات
 struct sClient {
     string AccountNumber;
     string PinCode;
@@ -86,50 +94,49 @@ struct sClient {
     double AccountBalance;
 };</code></pre>
 
-        <h4>2. الأداة الثانية: <code>SplitString</code> (مِشرط الجرّاح)</h4>
-        <p><strong>ما هي؟</strong> هي الدالة التي أتقنتِها تماماً. وظيفتها هي أخذ أي سلسلة نصية وتقطيعها إلى أجزاء صغيرة بناءً على فاصل معين.</p>
-        <p><strong>لماذا؟</strong> لأن البيانات في السطر النصي مدمجة معاً، ونحتاج لهذه الأداة لفصل كل معلومة عن الأخرى.</p>
+        <h4>2. الأداة الثانية: أداة التقطيع (<code>SplitString</code>)</h4>
+        <p><strong>ما هي؟</strong> هي الدالة التي أتقنتِها تماماً. وظيفتها هي أخذ أي سلسلة نصية وتقطيعها إلى أجزاء صغيرة بناءً على فاصل معين. نحتاجها لأن البيانات في السطر النصي مدمجة معاً، وهذه الأداة تفصل كل معلومة عن الأخرى.</p>
 
-        <h2>ثانياً: حل المشكلة الكبرى - <code>ConvertLinetoRecord</code></h2>
-        <p>هذه هي الدالة المحورية التي عملنا عليها اليوم. هدفها هو استخدام الأدوات السابقة لتحويل سطر بيانات إلى سجل عميل مكتمل. لنرَ كيف تعمل خطوة بخطوة:</p>
+        <h2>ثانياً: حل المشكلة الكبرى - الدالة المحورية <code>ConvertLinetoRecord</code></h2>
+        <p>هذه هي الدالة التي عملنا عليها اليوم. هدفها هو استخدام الأدوات السابقة لتحويل سطر بيانات إلى سجل عميل مكتمل. لنرَ كيف تعمل خطوة بخطوة:</p>
         
         <h3>المدخلات (Input):</h3>
+        <p>نبدأ بسطر نصي واحد، حيث يفصل بين كل معلومة وأخرى فاصل مميز.</p>
         <pre><code>string Line = "A150#//#1234#//#Mohammed#//#079999#//#5270.00";</code></pre>
 
-        <hr>
+        <hr style="margin: 2em 0;">
 
         <h3>الخطوة 1: استدعاء أداة التقطيع <code>SplitString</code></h3>
-        <p>نقوم أولاً بتمرير السطر الكامل إلى دالتنا <code>SplitString</code> لتقوم بتفكيكه.</p>
-        <pre><code>// داخل دالة ConvertLinetoRecord
+        <p>نقوم أولاً بتمرير السطر الكامل إلى دالتنا <code>SplitString</code> لتقوم بتفكيكه إلى أجزاء أصغر.</p>
+        <pre><code class="language-cpp">// داخل دالة ConvertLinetoRecord
 vector&lt;string&gt; vClientData = SplitString(Line, "#//#");</code></pre>
-        <p><strong>النتيجة:</strong> أصبح لدينا الآن <code>vector</code> يحتوي على كل معلومة في خانة منفصلة:</p>
+        <p><strong>النتيجة:</strong> أصبح لدينا الآن مصفوفة ديناميكية (تُسمى في C++ باسم <strong><code>vector</code></strong>) تحتوي على كل معلومة في خانة منفصلة:</p>
         <pre><code>vClientData = [ "A150", "1234", "Mohammed", "079999", "5270.00" ]
-                   ^       ^         ^           ^           ^
-                  [0]     [1]       [2]         [3]         [4]</code></pre>
+// Index:        [0]     [1]       [2]         [3]         [4]</code></pre>
         
-        <h3>الخطوة 2: إنشاء <code>struct</code> فارغ وتعبئته من الـ <code>vector</code></h3>
-        <p>الآن بعد أن أصبحت البيانات مفصولة ومنظمة، يمكننا بسهولة تعبئة قالب <code>sClient</code> الخاص بنا.</p>
-        <pre><code>// 1. نُنشئ "بطاقة تعريف" فارغة
+        <h3>الخطوة 2: إنشاء قالب (<code>struct</code>) فارغ وتعبئته من المصفوفة (<code>vector</code>)</h3>
+        <p>الآن بعد أن أصبحت البيانات مفصولة ومنظمة في الـ <code>vector</code>، يمكننا بسهولة تعبئة قالب <code>sClient</code> الخاص بنا. الـ <code>vector</code> يعمل تماماً مثل <strong>الجسر</strong> بين النص الخام والسجل المنظم.</p>
+        
+        <h4>عملية "صب" البيانات من الـ <code>vector</code> إلى الـ <code>struct</code>:</h4>
+        <pre><code class="language-cpp">
+// 1. نُنشئ "بطاقة تعريف" فارغة
 sClient Client;
 
-// 2. نبدأ عملية التعبئة بالترتيب، عنصر تلو الآخر</code></pre>
-        
-        <h4>عملية "صب" البيانات:</h4>
-        <pre>
-vClientData[0] ("A150")    -------------------&gt; Client.AccountNumber
-vClientData[1] ("1234")    -------------------&gt; Client.PinCode
-vClientData[2] ("Mohammed")-------------------&gt; Client.Name
-vClientData[3] ("079999")  -------------------&gt; Client.Phone
-vClientData[4] ("5270.00") --- (stod) ---&gt; Client.AccountBalance
-        </pre>
-        <p><strong>ملاحظة خاصة:</strong> لاحظي السهم الأخير. لأن <code>AccountBalance</code> هو رقم (<code>double</code>) والقيمة في الـ <code>vector</code> هي نص (<code>string</code>)، استخدمنا دالة جاهزة اسمها <code>stod</code> (<strong>st</strong>ring <strong>to</strong> <strong>d</strong>ouble) لتقوم بعملية التحويل الضرورية.</p>
+// 2. نبدأ عملية التعبئة بالترتيب، عنصر تلو الآخر
+Client.AccountNumber = vClientData[0]; // "A150"
+Client.PinCode       = vClientData[1]; // "1234"
+Client.Name          = vClientData[2]; // "Mohammed"
+Client.Phone         = vClientData[3]; // "079999"
+Client.AccountBalance = stod(vClientData[4]); // 5270.00
+        </code></pre>
+        <p><strong>ملاحظة خاصة:</strong> لاحظي السطر الأخير. حقل الرصيد <code>AccountBalance</code> هو من نوع رقم عشري (<code>double</code>)، بينما القيمة في المصفوفة هي نص (<code>string</code>). لذلك، كان لا بد من تحويلها. استخدمنا دالة جاهزة اسمها <strong><code>stod</code></strong> وهي اختصار لـ (<strong>st</strong>ring <strong>to</strong> <strong>d</strong>ouble) لتقوم بهذه المهمة.</p>
 
         <h3>المخرجات (Output):</h3>
-        <p>في النهاية، تُرجع الدالة <code>Client</code>، الذي لم يعد فارغاً، بل هو <code>struct</code> مكتمل ومنظم يحتوي على جميع بيانات العميل وجاهز للاستخدام.</p>
+        <p>في النهاية، تُرجع الدالة المتغير <code>Client</code>، الذي لم يعد فارغاً، بل هو قالب بيانات <code>struct</code> مكتمل ومنظم يحتوي على جميع بيانات العميل وجاهز للاستخدام.</p>
 
         <div class="summary">
             <h3>الخلاصة النهائية</h3>
-            <p>المهارة الحقيقية التي تعلمناها اليوم هي <strong>"تجميع الأدوات"</strong>. لم نكتب دالة معقدة من الصفر، بل قمنا ببناء دالة (<code>ConvertLinetoRecord</code>) تستخدم بذكاء دالة أخرى أبسط (<code>SplitString</code>) لإنجاز مهمتها. هذا المفهوم (إعادة استخدام الكود وتجزئة المشاكل) هو جوهر البرمجة الفعالة والنظيفة.</p>
+            <p>المهارة الحقيقية التي تعلمناها اليوم هي <strong>"تجميع الأدوات"</strong>. لم نكتب دالة معقدة من الصفر، بل قمنا ببناء دالة (<code>ConvertLinetoRecord</code>) تستخدم بذكاء دالة أخرى أبسط (<code>SplitString</code>) لإنجاز مهمتها. هذا المفهوم—إعادة استخدام الكود وتجزئة المشاكل—هو جوهر البرمجة الفعالة والنظيفة.</p>
         </div>
     </div>
 </body>

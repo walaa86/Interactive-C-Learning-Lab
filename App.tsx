@@ -3,15 +3,6 @@ import { problems } from './lib/problems';
 import Visualizer from './components/Visualizer';
 import Icon from './components/Icon';
 
-// Tell TypeScript that the 'lucide' global exists.
-declare global {
-  interface Window {
-    lucide?: {
-      createIcons: () => void;
-    };
-  }
-}
-
 const problemGroups = [
   {
     title: 'Level 1: Character Manipulation',
@@ -22,14 +13,14 @@ const problemGroups = [
     problemIds: [12, 13, 14, 29, 15, 16, 17, 18, 19, 28]
   },
   {
-    title: 'Level 3: Structs & File I/O',
+    title: 'Level 3: Structs & File I/O - Data Persistence',
     problemIds: [21, 22, 23, 24, 25, 26, 27]
   }
 ];
 
 
 function App() {
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(22);
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light');
   const activeProblem = problems.find(p => p.id === page);
 
@@ -42,12 +33,6 @@ function App() {
     }
     localStorage.setItem('theme', theme);
   }, [theme]);
-  
-  useEffect(() => {
-    if (window.lucide) {
-      window.lucide.createIcons();
-    }
-  }, [theme, page]); // Rerun when theme or page changes
 
   const toggleTheme = () => {
     setTheme(prev => (prev === 'light' ? 'dark' : 'light'));

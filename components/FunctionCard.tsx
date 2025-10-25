@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import type { FunctionDef } from '../types';
 import Icon from './Icon';
 
@@ -8,14 +8,6 @@ interface FunctionCardProps {
 
 const FunctionCard: React.FC<FunctionCardProps> = ({ f }) => {
   const [open, setOpen] = useState(false);
-
-  // Run the icon creation script after the component re-renders due to the 'open' state changing.
-  // This is a more reliable way to ensure the new icon element is in the DOM before the script runs.
-  useEffect(() => {
-    if (window.lucide) {
-      window.lucide.createIcons();
-    }
-  }, [open]);
 
   return (
     <div className="card bg-white dark:bg-slate-800 mb-3">
