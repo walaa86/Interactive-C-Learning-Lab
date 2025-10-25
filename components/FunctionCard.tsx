@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import type { FunctionDef } from '../types';
 import Icon from './Icon';
@@ -10,6 +9,8 @@ interface FunctionCardProps {
 const FunctionCard: React.FC<FunctionCardProps> = ({ f }) => {
   const [open, setOpen] = useState(false);
 
+  // Run the icon creation script after the component re-renders due to the 'open' state changing.
+  // This is a more reliable way to ensure the new icon element is in the DOM before the script runs.
   useEffect(() => {
     if (window.lucide) {
       window.lucide.createIcons();
@@ -23,7 +24,9 @@ const FunctionCard: React.FC<FunctionCardProps> = ({ f }) => {
           <div className="text-sm font-semibold text-slate-700 dark:text-slate-200">{f.name}</div>
           <div className="text-xs mono text-slate-500 dark:text-slate-400">{f.signature}</div>
         </div>
-        <button onClick={() => setOpen(o => !o)} className="p-2 rounded-full bg-teal-500 text-white hover:bg-teal-600 dark:bg-teal-400 dark:text-slate-900 dark:hover:bg-teal-300 transition-colors">
+        <button
+          onClick={() => setOpen(o => !o)}
+          className="p-2 rounded-full bg-teal-500 text-white hover:bg-teal-600 dark:bg-teal-400 dark:text-slate-900 dark:hover:bg-teal-300 transition-colors">
           <Icon name={open ? 'minus' : 'plus'} />
         </button>
       </div>

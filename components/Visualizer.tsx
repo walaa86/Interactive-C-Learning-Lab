@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import type { Problem, Step } from '../types';
 import FunctionCard from './FunctionCard';
 import Icon from './Icon';
@@ -6,11 +6,6 @@ import Icon from './Icon';
 interface VisualizerProps {
   problem: Problem;
   setPage: (pageId: number) => void;
-}
-
-interface MemoryItem {
-  t: number;
-  note: string;
 }
 
 // Map of problems to their logical successors to guide the learning path.
@@ -23,106 +18,93 @@ const nextProblemMap: Record<number, number> = {
 
 const Visualizer: React.FC<VisualizerProps> = ({ problem, setPage }) => {
   const [input, setInput] = useState(problem.example);
-  
-  // Robustly initialize steps, catching any generator errors.
-  const [steps, setSteps] = useState<Step[]>(() => {
-    try {
-      const initialSteps = problem.generator(problem.example);
-      if (!initialSteps || initialSteps.length === 0) {
-        console.error("Generator returned empty steps for initial example:", problem.example);
-        return [{ i: -1, code: 'Initialization Error', explanation: 'Failed to generate visualization steps for the default example.', input: problem.example, mem: [] }];
-      }
-      return initialSteps;
-    } catch (e) {
-      console.error("Error during initial step generation:", e);
-      const message = e instanceof Error ? e.message : String(e);
-      return [{ i: -1, code: 'Initialization Error', explanation: `An error occurred: ${message}`, input: problem.example, mem: [] }];
-    }
-  });
-
+  const [steps, setSteps] = useState<Step[]>([]);
   const [pos, setPos] = useState(0);
   const [paper, setPaper] = useState(false);
-  const [notes, setNotes] = useState<string[]>([]);
-  const [memory, setMemory] = useState<MemoryItem[]>([]);
   const [revealedHints, setRevealedHints] = useState<number[]>([]);
 
-  useEffect(() => {
-    if (window.lucide) {
-      window.lucide.createIcons();
-    }
-  });
-
-  // This function resets the simulation to its initial state based on the current input.
-  // It now includes error handling for the step generator.
-  const doReset = () => {
+  const runSimulation = useCallback((currentInput: string) => {
     try {
-      const newSteps = problem.generator(input);
+      const newSteps = problem.generator(currentInput);
       if (!newSteps || newSteps.length === 0) {
-        console.error("Generator returned empty steps for input:", input);
-        setSteps([{ i: -1, code: 'Generation Error', explanation: 'Could not generate visualization for this input. Please check the format.', input: input, mem: [] }]);
+        console.error("Generator returned empty steps for input:", currentInput);
+        setSteps([{ i: -1, code: 'Generation Error', explanation: 'Could not generate visualization for this input. Please check the format.', input: currentInput, mem: [] }]);
       } else {
         setSteps(newSteps);
       }
     } catch (e) {
       console.error("Error in step generator:", e);
       const message = e instanceof Error ? e.message : String(e);
-      // Set steps to a single error step to prevent crash and inform the user.
-      setSteps([{ i: -1, code: 'Generation Error', explanation: `An error occurred while processing input: ${message}`, input: input, mem: [] }]);
+      setSteps([{ i: -1, code: 'Generation Error', explanation: `An error occurred while processing input: ${message}`, input: currentInput, mem: [] }]);
     }
     setPos(0);
-    setNotes([]);
     setRevealedHints([]);
-    setMemory([]); // Explicitly reset memory. The effect will run again but this prevents stale state.
-  };
+  }, [problem]);
 
-  // When the problem or input changes, reset the simulation.
+  // This effect handles both the initial run and any subsequent changes to the input.
   useEffect(() => {
-    doReset();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [input, problem]);
+    runSimulation(input);
+  }, [input, runSimulation]);
 
   // DERIVED STATE for Simulated Memory
-  // The memory log is always consistent with the execution step.
-  useEffect(() => {
+  const memory = useMemo(() => {
     if (steps.length === 0) {
-      setMemory([]);
-      return;
+      return [];
     }
-    const relevantSteps = steps.slice(0, pos + 1);
-    let timestamp = Date.now();
-    const newMemory = relevantSteps.flatMap(step => {
-      const items: MemoryItem[] = [];
-      if (step.modified) {
-        items.push({ t: timestamp++, note: `Var="${step.modified}"` });
-      }
-      if (step.mem?.length) {
-        items.push(...step.mem.map(note => ({ t: timestamp++, note })));
-      }
-      return items;
-    });
-    setMemory(newMemory);
+    
+    return steps
+      .slice(0, pos + 1)
+      .flatMap((step, stepIndex) => {
+        const notes: { key: string, note: string }[] = [];
+        let noteSubIndex = 0;
+        
+        if (step.modified !== undefined) {
+          notes.push({ 
+            key: `s${stepIndex}-mod`, 
+            note: `Var="${step.modified}"`
+          });
+        }
+        
+        if (step.mem) {
+          step.mem.forEach(m => {
+            notes.push({ 
+              key: `s${stepIndex}-mem${noteSubIndex++}`, 
+              note: m 
+            });
+          });
+        }
+        
+        return notes;
+      });
   }, [pos, steps]);
   
   // DERIVED STATE for Paper & Pen notes.
-  // This ensures the notes are always in sync with the current step.
-  useEffect(() => {
-    if (!paper) {
-      if (notes.length > 0) setNotes([]); // Clear notes if paper is turned off.
-      return;
+  const notes = useMemo(() => {
+    if (!paper || steps.length === 0) {
+      return [];
     }
-
-    const relevantSteps = steps.slice(0, pos + 1);
-    const newNotes = relevantSteps.flatMap((step, index) => 
-      step.mem?.map(m => `[step ${index + 1}] ${m}`) ?? []
-    );
-    setNotes(newNotes);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    
+    return steps
+      .slice(0, pos + 1)
+      .flatMap((step, stepIndex) => 
+        step.mem?.map((m, memIndex) => ({
+          key: `s${stepIndex}-p${memIndex}`,
+          note: `[step ${stepIndex + 1}] ${m}`
+        })) ?? []
+      );
   }, [pos, steps, paper]);
 
   const current = steps[pos] || steps[0];
 
-  // FIX: Added a return statement with JSX to render the component UI.
-  // This fixes the error where the component had a `void` return type.
+  if (!current) {
+    return (
+      <div className="text-center p-8">
+        <h2 className="text-xl font-bold">Loading...</h2>
+        <p>Preparing visualization steps.</p>
+      </div>
+    );
+  }
+  
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
@@ -139,10 +121,11 @@ const Visualizer: React.FC<VisualizerProps> = ({ problem, setPage }) => {
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              className="flex-grow input bg-slate-100 dark:bg-slate-700 border-slate-300 dark:border-slate-600 focus:ring-sky-500 focus:border-sky-500"
+              className="flex-grow input bg-slate-100 dark:bg-slate-700 border-slate-300 dark:border-slate-600 focus:ring-sky-500 focus:border-sky-500 rounded-md shadow-sm"
               placeholder="Enter input string here..."
+              aria-label="Input for the problem"
             />
-            <button onClick={doReset} className="btn bg-sky-500 hover:bg-sky-600 text-white font-semibold">
+            <button onClick={() => runSimulation(input)} className="btn bg-sky-500 hover:bg-sky-600 text-white font-semibold flex items-center justify-center gap-2 px-4 py-2 rounded-md">
               <Icon name="refresh-cw" size={16} />
               <span>Run / Reset</span>
             </button>
@@ -187,7 +170,7 @@ const Visualizer: React.FC<VisualizerProps> = ({ problem, setPage }) => {
               <div className="mt-4">
                 <h4 className="text-sm font-semibold text-slate-500 dark:text-slate-400">Memory Log</h4>
                 <div className="paper bg-slate-100 dark:bg-slate-700 p-2 rounded mono text-sm h-32 overflow-y-auto">
-                  {memory.map((item) => <div key={item.t}>{item.note}</div>)}
+                  {memory.map((item) => <div key={item.key}>{item.note}</div>)}
                 </div>
               </div>
             )}
@@ -195,11 +178,11 @@ const Visualizer: React.FC<VisualizerProps> = ({ problem, setPage }) => {
 
         {/* Controls */}
         <div className="flex items-center justify-center gap-4">
-          <button onClick={() => setPos(p => Math.max(0, p - 1))} disabled={pos === 0} className="p-2 rounded-full disabled:opacity-50 disabled:cursor-not-allowed bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600">
+          <button onClick={() => setPos(p => Math.max(0, p - 1))} disabled={pos === 0} className="p-2 rounded-full disabled:opacity-50 disabled:cursor-not-allowed bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600" aria-label="Previous step">
             <Icon name="chevron-left" />
           </button>
           <span className="text-sm font-semibold text-slate-600 dark:text-slate-400 mono">Step {pos + 1} / {steps.length}</span>
-          <button onClick={() => setPos(p => Math.min(steps.length - 1, p + 1))} disabled={pos >= steps.length - 1} className="p-2 rounded-full disabled:opacity-50 disabled:cursor-not-allowed bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600">
+          <button onClick={() => setPos(p => Math.min(steps.length - 1, p + 1))} disabled={pos >= steps.length - 1} className="p-2 rounded-full disabled:opacity-50 disabled:cursor-not-allowed bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600" aria-label="Next step">
             <Icon name="chevron-right" />
           </button>
         </div>
@@ -213,6 +196,38 @@ const Visualizer: React.FC<VisualizerProps> = ({ problem, setPage }) => {
             <div className="paper bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 text-slate-800 dark:text-amber-100 rounded-lg p-3 text-sm">
                 <p>{current.explanation}</p>
             </div>
+        </div>
+
+        <div className="card bg-white dark:bg-slate-800">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="font-bold text-slate-700 dark:text-slate-300">Paper & Pen Trace</h3>
+            <div className="relative flex items-center">
+              <button
+                onClick={() => setPaper(!paper)}
+                role="switch"
+                aria-checked={paper}
+                className={`${
+                  paper ? 'bg-teal-500' : 'bg-slate-300 dark:bg-slate-600'
+                } relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 dark:focus:ring-offset-slate-800`}
+              >
+                <span
+                  aria-hidden="true"
+                  className={`${
+                    paper ? 'translate-x-5' : 'translate-x-0'
+                  } pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out`}
+                />
+              </button>
+            </div>
+          </div>
+          {paper && (
+            <div className="paper bg-slate-100 dark:bg-slate-700 p-2 rounded mono text-sm h-48 overflow-y-auto mt-2">
+              {notes.length > 0 ? (
+                notes.map((item) => <div key={item.key} className="item-enter">{item.note}</div>)
+              ) : (
+                <p className="text-slate-500 dark:text-slate-400 text-xs p-2">Begin stepping through the code to see the trace...</p>
+              )}
+            </div>
+          )}
         </div>
 
         {problem.functions.length > 0 && (
@@ -230,7 +245,7 @@ const Visualizer: React.FC<VisualizerProps> = ({ problem, setPage }) => {
                         {revealedHints.includes(i) ? (
                             <p className="text-sm text-slate-600 dark:text-slate-400">{hint}</p>
                         ) : (
-                            <button onClick={() => setRevealedHints(prev => [...prev, i])} className="btn text-sm bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600">
+                            <button onClick={() => setRevealedHints(prev => [...prev, i])} className="btn text-sm bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center gap-2 px-3 py-1 rounded-md">
                                 <Icon name="lightbulb" size={14}/>
                                 <span>Reveal Hint #{i+1}</span>
                             </button>
@@ -243,7 +258,7 @@ const Visualizer: React.FC<VisualizerProps> = ({ problem, setPage }) => {
         {nextProblemMap[problem.id] && (
           <div className="card bg-white dark:bg-slate-800 text-center">
             <h3 className="font-bold mb-2 text-slate-700 dark:text-slate-300">Ready for the next step?</h3>
-            <button onClick={() => setPage(nextProblemMap[problem.id])} className="btn bg-teal-500 hover:bg-teal-600 text-white font-semibold w-full">
+            <button onClick={() => setPage(nextProblemMap[problem.id])} className="btn bg-teal-500 hover:bg-teal-600 text-white font-semibold w-full flex items-center justify-center gap-2 px-4 py-2 rounded-md">
               <span>Continue to Problem #{nextProblemMap[problem.id]}</span>
               <Icon name="arrow-right" size={16} />
             </button>
@@ -255,6 +270,4 @@ const Visualizer: React.FC<VisualizerProps> = ({ problem, setPage }) => {
   );
 };
 
-// FIX: Added a default export.
-// This fixes the error in App.tsx where the module was not found.
 export default Visualizer;
